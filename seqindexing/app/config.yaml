@@ -1,0 +1,20 @@
+# Themes related configurations
+fonts:
+  family: "Arial, sans-serif"
+  title_size: "28px"
+  label_size: "14px"
+  small_size: "11px"
+
+colors:
+  primary: "#007BFF"
+  background: "#FFFFFF"
+  border: "#ccc"
+
+layout:
+  preview_height: 60
+  preview_card_height: 90
+
+
+# data related configuration
+series:
+  window_size: 30

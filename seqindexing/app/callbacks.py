@@ -1,25 +1,46 @@
 from dash import Input, Output, State, callback_context, ALL
 from dash import html, dcc
-from .data import series, series_x
+from .data import series, series_x, generate_dummy_matches
 from .config import SERIES_WINDOW_SIZE
 from .utils import parse_and_interpolate_path
 import dash
 import plotly.graph_objs as go
 import numpy as np
-import json
 
 
-# Assuming you have access to series and series_x
 def register_callbacks(app):
     @app.callback(
         Output('series-selector-container', 'children'),
-        Input('selected-series-store', 'data')
+        Input('selected-series-store', 'data'),
+        Input('match-results-store', 'data')  # <-- new Input, not State
     )
-    def update_series_preview_list(selected):
+    def update_series_preview_list(selected, match_data):
         children = []
+        color_list = ['blue', 'red', 'green', 'orange', 'purple']
+        x_max = max(series_x)
+
         for i in range(len(series)):
             is_selected = str(i) in selected
             border_style = '3px solid #007BFF' if is_selected else '1px solid #ccc'
+            color = color_list[i % len(color_list)]
+
+            intervals = match_data.get(str(i), [])
+            shapes = [
+                {
+                    'type': 'rect',
+                    'xref': 'x',
+                    'yref': 'paper',
+                    'x0': interval['start'],
+                    'x1': min(interval['end'], x_max),
+                    'y0': 0,
+                    'y1': 1,
+                    'fillcolor': color,
+                    'opacity': 0.2,
+                    'line': {'width': 0},
+                    'layer': 'below'
+                }
+                for interval in intervals
+            ]
 
             children.append(html.Div([
                 dcc.Graph(
@@ -29,18 +50,18 @@ def register_callbacks(app):
                             'x': series_x[::10],
                             'y': series[i][::10],
                             'mode': 'lines',
-                            'line': {'width': 1}
+                            'line': {'width': 1, 'color': color}
                         }],
                         'layout': {
                             'height': 40,
                             'margin': dict(l=10, r=10, t=10, b=10),
                             'xaxis': {'visible': False},
                             'yaxis': {'visible': False},
-                            'showlegend': False
+                            'showlegend': False,
+                            'shapes': shapes
                         }
                     },
-                    config={'staticPlot': True,
-                            'displayModeBar': False},
+                    config={'staticPlot': True, 'displayModeBar': False},
                     style={'cursor': 'pointer', 'height': '40px'}
                 ),
                 html.Div(f"Series {i}", style={'textAlign': 'center', 'fontSize': '12px'})
@@ -52,7 +73,6 @@ def register_callbacks(app):
             }))
         return children
 
-    # Toggle selection on click
     @app.callback(
         Output('selected-series-store', 'data'),
         Input({'type': 'series-card', 'index': ALL}, 'n_clicks'),
@@ -74,12 +94,12 @@ def register_callbacks(app):
             selected.add(index_str)
         return list(selected)
 
-    # Update main plot with highlight intervals
     @app.callback(
         Output("example-plot", "figure"),
-        Input("selected-series-store", "data")
+        Input("selected-series-store", "data"),
+        State("match-results-store", "data")
     )
-    def update_main_plot(selected_indices):
+    def update_main_plot(selected_indices, match_data):
         if not selected_indices:
             return {
                 'data': [],
@@ -87,81 +107,62 @@ def register_callbacks(app):
             }
 
         fig = go.Figure()
-        # Define a list of colors to use for highlighting (cycled based on series index)
         color_list = ['blue', 'red', 'green', 'orange', 'purple']
-        # Get the x-axis domain from series_x
-        x_min = min(series_x)
         x_max = max(series_x)
-        x_range = x_max - x_min
 
-        # ==============================================================================
-        # For future modification:
-        #
-        # Instead of generating random intervals, you may want your algorithm to return
-        # highlight intervals in the following format:
-        #
-        #   pattern_intervals_config = {
-        #       <series index>: [
-        #           {'start': <x_start>, 'end': <x_end>, 'annotation': "Optional Label"},
-        #           {'start': <x_start>, 'end': <x_end>, 'annotation': "Optional Label"}
-        #       ],
-        #       ...
-        #   }
-        #
-        # You can then simply assign pattern_intervals_config to that result.
-        # For now, we leave this dictionary empty to trigger the random interval fallback.
-        # ==============================================================================
-        pattern_intervals_config = {}  # Future: assign your algorithm's intervals here
-
-        for idx in selected_indices:
+        for idx_num, idx in enumerate(selected_indices):
             i = int(idx)
-            # Add the main series trace.
-            fig.add_trace(go.Scatter(x=series_x, y=series[i], mode='lines', name=f"Series {i}"))
-
-            # Determine the highlight intervals:
-            if i in pattern_intervals_config and pattern_intervals_config[i]:
-                intervals = pattern_intervals_config[i]
-            else:
-                # Fallback: Generate two random intervals for this series.
-                intervals = []
-                for _ in range(2):
-                    start = np.random.uniform(x_min, x_max - 0.1 * x_range)
-                    length = np.random.uniform(0.05 * x_range, 0.1 * x_range)
-                    end = start + length
-                    intervals.append({'start': start, 'end': end, 'annotation': None})
-
-            # Add vertical rectangles based on the intervals.
             color = color_list[i % len(color_list)]
+
+            fig.add_trace(go.Scatter(
+                x=series_x,
+                y=series[i],
+                mode='lines',
+                name=f"Series {i}",
+                line={'color': color}
+            ))
+
+            intervals = match_data.get(str(i), [])
             for j, interval in enumerate(intervals, start=1):
-                annotation_text = interval.get('annotation')
-                if annotation_text is None:
-                    annotation_text = f"Series {i} Pattern {j}"
                 fig.add_vrect(
                     x0=interval['start'],
-                    x1=interval['end'],
+                    x1=min(interval['end'], x_max),
                     fillcolor=color,
                     opacity=0.2,
                     layer='below',
                     line_width=0,
-                    annotation_text=annotation_text,
+                    annotation_text=f"Series {i} Match {j}",
                     annotation_position='top left'
                 )
 
-        fig.update_layout(title="Selected Series", margin=dict(t=30))
+        fig.update_layout(title="Selected Series with Highlighted Matches", margin=dict(t=30))
         return fig
 
     @app.callback(
         Output("submit-sketch", "children"),
+        Output("match-results-store", "data"),
         Input("submit-sketch", "n_clicks"),
         State("sketch-shape-store", "data")
     )
     def submit_sketch(n_clicks, shapes):
-        print("Submit button triggered")
         if not n_clicks:
             raise dash.exceptions.PreventUpdate
 
-        print("Submitted shapes:", shapes)
-        return f"Submitted ({len(shapes)} shape{'s' if len(shapes) != 1 else ''})"
+        if not shapes or len(shapes) == 0:
+            return "No sketch submitted", {}
+
+        sketch = np.array(shapes)
+        topk_matches = generate_dummy_matches(series)  # TODO: Replace with real matcher
+
+        # Convert match format to: {str(series_idx): [{start, end, score}]}
+        formatted = {}
+        for i, matches in enumerate(topk_matches):
+            formatted[str(i)] = [
+                {"start": series_x[start], "end": series_x[min(end, len(series_x) - 1)], "score": float(score)}
+                for start, end, score in matches
+            ]
+
+        return f"Submitted ({len(shapes)} shape{'s' if len(shapes) != 1 else ''})", formatted
 
     @app.callback(
         Output('sketch-shape-store', 'data'),
@@ -169,10 +170,8 @@ def register_callbacks(app):
         State('sketch-shape-store', 'data')
     )
     def update_sketch_store(relayout_data, current_data):
-        print("Relayout triggered:", relayout_data)
         if not relayout_data:
             raise dash.exceptions.PreventUpdate
 
         updated_shapes = parse_and_interpolate_path(relayout_data["shapes"][0]["path"]) if "shapes" in relayout_data else []
-
         return updated_shapes

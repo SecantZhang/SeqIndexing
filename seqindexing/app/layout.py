@@ -47,6 +47,7 @@ layout = html.Div([
                     'fontSize': LABEL_FONT_SIZE,
                 }),
                 dcc.Store(id='selected-series-store', data=[]),
+                dcc.Store(id='match-results-store', data={}),
                 html.Div(id='series-selector-container', style={
                     'height': f'{PREVIEW_CARD_HEIGHT * 4.5}px',  # rough estimate for visible cards
                     'overflowY': 'scroll',

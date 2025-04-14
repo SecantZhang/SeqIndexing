@@ -50,13 +50,17 @@ layout = html.Div([
                 dcc.Store(id='match-results-store', data={}),
                 html.Div(id='series-selector-container', style={
                     'height': f'{PREVIEW_CARD_HEIGHT * 4.5}px',  # rough estimate for visible cards
-                    'overflowY': 'scroll',
+                    'overflowY': 'auto',
+                    'flexGrow': '1',
                     'display': 'flex',
                     'flexDirection': 'column',
-                    'gap': '8px'
+                    'gap': '8px',
+                    'minHeight': '0'
                 })
             ], style={
                 'flex': '3',
+                'display': 'flex',
+                'flexDirection': 'column',
                 'padding': '10px',
                 'border': UNSELECTED_BORDER,
                 'borderRadius': '8px',
@@ -67,6 +71,16 @@ layout = html.Div([
 
             # Right Panel (7/10)
             html.Div([
+                dcc.Tabs(
+                    id="sketch-tab-manager",
+                    value=None,  # no tab selected at first
+                    children=[],
+                    persistence=True,
+                    persistence_type="session"
+                ),
+                dcc.Store(id="sketch-history-store", data={}),
+                dcc.Store(id="active-sketch-id", data=None),
+
                 html.H3("Sketch Area", style={
                     'fontFamily': FONT_FAMILY,
                     'fontSize': LABEL_FONT_SIZE,
@@ -106,9 +120,40 @@ layout = html.Div([
                     }
                 ),
                 dcc.Store(id='sketch-shape-store'),
+                dcc.Store(id='distance-threshold-store', data=1.0),
                 html.Button("Submit", id="submit-sketch", n_clicks=0, style={
                     'marginTop': '10px',
                     'fontSize': SMALL_FONT_SIZE
+                }),
+                html.Div([
+                    html.Div([
+                        dcc.Graph(
+                            id="distance-histogram",
+                            config={"displayModeBar": False},
+                            style={"height": "90px", "padding": "0", "margin": "0"}
+                        ),
+                        dcc.Slider(
+                            id="distance-threshold-slider",
+                            min=0,
+                            max=1,
+                            step=0.01,
+                            value=1.0,
+                            tooltip={"always_visible": False},
+                            updatemode="drag",
+                            className="custom-slider",
+                            marks={}
+                        )
+                    ], style={
+                        'marginTop': '10px',
+                        'padding': '4px 0',
+                        'width': '100%',
+                        'boxSizing': 'border-box'
+                    })
+                ], style={
+                    'marginTop': '12px',
+                    'padding': '6px',
+                    'borderTop': '1px solid #ccc',
+                    'height': '140px'
                 })
             ], style={
                 'flex': '7',
@@ -117,6 +162,9 @@ layout = html.Div([
                 'borderRadius': '8px',
                 'backgroundColor': BACKGROUND_COLOR,
                 'fontFamily': FONT_FAMILY,
+                'overflow': 'hidden',
+                'maxWidth': '100%',
+                'boxSizing': 'border-box'
             })
         ], style={
             'display': 'flex',

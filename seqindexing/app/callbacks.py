@@ -6,15 +6,17 @@ from .utils import parse_and_interpolate_path
 import dash
 import plotly.graph_objs as go
 import numpy as np
+import uuid
 
 
 def register_callbacks(app):
     @app.callback(
         Output('series-selector-container', 'children'),
         Input('selected-series-store', 'data'),
-        Input('match-results-store', 'data')  # <-- new Input, not State
+        Input('match-results-store', 'data'),
+        Input('distance-threshold-store', 'data')
     )
-    def update_series_preview_list(selected, match_data):
+    def update_series_preview_list(selected, match_data, threshold):
         children = []
         color_list = ['blue', 'red', 'green', 'orange', 'purple']
         x_max = max(series_x)
@@ -24,7 +26,10 @@ def register_callbacks(app):
             border_style = '3px solid #007BFF' if is_selected else '1px solid #ccc'
             color = color_list[i % len(color_list)]
 
-            intervals = match_data.get(str(i), [])
+            intervals = [
+                m for m in match_data.get(str(i), [])
+                if m['score'] <= threshold
+            ]
             shapes = [
                 {
                     'type': 'rect',
@@ -97,9 +102,10 @@ def register_callbacks(app):
     @app.callback(
         Output("example-plot", "figure"),
         Input("selected-series-store", "data"),
+        Input('distance-threshold-store', 'data'),
         State("match-results-store", "data")
     )
-    def update_main_plot(selected_indices, match_data):
+    def update_main_plot(selected_indices, threshold, match_data):
         if not selected_indices:
             return {
                 'data': [],
@@ -122,7 +128,10 @@ def register_callbacks(app):
                 line={'color': color}
             ))
 
-            intervals = match_data.get(str(i), [])
+            intervals = [
+                m for m in match_data.get(str(i), [])
+                if m['score'] <= threshold
+            ]
             for j, interval in enumerate(intervals, start=1):
                 fig.add_vrect(
                     x0=interval['start'],
@@ -141,28 +150,70 @@ def register_callbacks(app):
     @app.callback(
         Output("submit-sketch", "children"),
         Output("match-results-store", "data"),
+        Output("distance-histogram", "figure"),
+        Output("distance-threshold-slider", "max"),
+        Output("distance-threshold-slider", "value"),
         Input("submit-sketch", "n_clicks"),
         State("sketch-shape-store", "data")
     )
     def submit_sketch(n_clicks, shapes):
-        if not n_clicks:
+        if not n_clicks or not shapes:
             raise dash.exceptions.PreventUpdate
 
-        if not shapes or len(shapes) == 0:
-            return "No sketch submitted", {}
-
         sketch = np.array(shapes)
-        topk_matches = generate_dummy_matches(series)  # TODO: Replace with real matcher
+        topk_matches = generate_dummy_matches(series)
 
-        # Convert match format to: {str(series_idx): [{start, end, score}]}
-        formatted = {}
-        for i, matches in enumerate(topk_matches):
-            formatted[str(i)] = [
-                {"start": series_x[start], "end": series_x[min(end, len(series_x) - 1)], "score": float(score)}
-                for start, end, score in matches
-            ]
+        # Flatten all distances
+        all_scores = [score for row in topk_matches for (_, _, score) in row]
+        max_dist = max(all_scores) if all_scores else 1.0
 
-        return f"Submitted ({len(shapes)} shape{'s' if len(shapes) != 1 else ''})", formatted
+        # Format results
+        formatted = {
+            str(i): [{"start": series_x[start], "end": series_x[min(end, len(series_x) - 1)], "score": float(score)}
+                     for start, end, score in matches]
+            for i, matches in enumerate(topk_matches)
+        }
+
+        # Histogram
+        hist_fig = go.Figure()
+        hist_fig.add_trace(go.Histogram(
+            x=all_scores,
+            nbinsx=30,
+            marker_color="rgba(33, 150, 243, 0.4)",  # blue
+            marker_line_color="rgba(33, 150, 243, 1)",
+            marker_line_width=1,
+            opacity=0.85
+        ))
+        hist_fig.update_layout(
+            margin=dict(t=8, b=8, l=8, r=8),
+            height=90,
+            bargap=0.2,
+            xaxis=dict(
+                title="Distance",
+                title_font=dict(size=11, color='#333'),
+                tickfont=dict(size=9),
+                zeroline=False,
+                showgrid=False
+            ),
+            yaxis=dict(
+                title="Count",
+                title_font=dict(size=11, color='#333'),
+                tickfont=dict(size=9),
+                zeroline=False,
+                showgrid=False
+            ),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            showlegend=False
+        )
+
+        return (
+            f"Submitted ({len(shapes)} shape{'s' if len(shapes) != 1 else ''})",
+            formatted,
+            hist_fig,
+            max_dist,
+            max_dist
+        )
 
     @app.callback(
         Output('sketch-shape-store', 'data'),
@@ -175,3 +226,10 @@ def register_callbacks(app):
 
         updated_shapes = parse_and_interpolate_path(relayout_data["shapes"][0]["path"]) if "shapes" in relayout_data else []
         return updated_shapes
+
+    @app.callback(
+        Output("distance-threshold-store", "data"),
+        Input("distance-threshold-slider", "value")
+    )
+    def update_threshold_store(value):
+        return value

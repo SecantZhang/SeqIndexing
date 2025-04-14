@@ -74,7 +74,7 @@ def register_callbacks(app):
             selected.add(index_str)
         return list(selected)
 
-    # Update main plot
+    # Update main plot with highlight intervals
     @app.callback(
         Output("example-plot", "figure"),
         Input("selected-series-store", "data")
@@ -87,9 +87,65 @@ def register_callbacks(app):
             }
 
         fig = go.Figure()
+        # Define a list of colors to use for highlighting (cycled based on series index)
+        color_list = ['blue', 'red', 'green', 'orange', 'purple']
+        # Get the x-axis domain from series_x
+        x_min = min(series_x)
+        x_max = max(series_x)
+        x_range = x_max - x_min
+
+        # ==============================================================================
+        # For future modification:
+        #
+        # Instead of generating random intervals, you may want your algorithm to return
+        # highlight intervals in the following format:
+        #
+        #   pattern_intervals_config = {
+        #       <series index>: [
+        #           {'start': <x_start>, 'end': <x_end>, 'annotation': "Optional Label"},
+        #           {'start': <x_start>, 'end': <x_end>, 'annotation': "Optional Label"}
+        #       ],
+        #       ...
+        #   }
+        #
+        # You can then simply assign pattern_intervals_config to that result.
+        # For now, we leave this dictionary empty to trigger the random interval fallback.
+        # ==============================================================================
+        pattern_intervals_config = {}  # Future: assign your algorithm's intervals here
+
         for idx in selected_indices:
             i = int(idx)
+            # Add the main series trace.
             fig.add_trace(go.Scatter(x=series_x, y=series[i], mode='lines', name=f"Series {i}"))
+
+            # Determine the highlight intervals:
+            if i in pattern_intervals_config and pattern_intervals_config[i]:
+                intervals = pattern_intervals_config[i]
+            else:
+                # Fallback: Generate two random intervals for this series.
+                intervals = []
+                for _ in range(2):
+                    start = np.random.uniform(x_min, x_max - 0.1 * x_range)
+                    length = np.random.uniform(0.05 * x_range, 0.1 * x_range)
+                    end = start + length
+                    intervals.append({'start': start, 'end': end, 'annotation': None})
+
+            # Add vertical rectangles based on the intervals.
+            color = color_list[i % len(color_list)]
+            for j, interval in enumerate(intervals, start=1):
+                annotation_text = interval.get('annotation')
+                if annotation_text is None:
+                    annotation_text = f"Series {i} Pattern {j}"
+                fig.add_vrect(
+                    x0=interval['start'],
+                    x1=interval['end'],
+                    fillcolor=color,
+                    opacity=0.2,
+                    layer='below',
+                    line_width=0,
+                    annotation_text=annotation_text,
+                    annotation_position='top left'
+                )
 
         fig.update_layout(title="Selected Series", margin=dict(t=30))
         return fig

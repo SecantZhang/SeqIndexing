@@ -1,10 +1,14 @@
 from dash import Input, Output, State, callback_context, ALL
 from dash import html, dcc
-from .data import series, series_x
+from .data import series, series_x, generate_dummy_matches
 from .config import SERIES_WINDOW_SIZE
-from .utils import parse_and_interpolate_path
+from .utils import parse_and_interpolate_path, rgb_to_rgba
 import dash
 import plotly.graph_objs as go
+from plotly.colors import DEFAULT_PLOTLY_COLORS
+from plotly.graph_objects import Layout, Scatter
+
+import re
 import numpy as np
 import json
 
@@ -87,11 +91,44 @@ def register_callbacks(app):
             }
 
         fig = go.Figure()
-        for idx in selected_indices:
-            i = int(idx)
-            fig.add_trace(go.Scatter(x=series_x, y=series[i], mode='lines', name=f"Series {i}"))
+        all_shapes = []
 
-        fig.update_layout(title="Selected Series", margin=dict(t=30))
+        for idx_num, idx in enumerate(selected_indices):
+            i = int(idx)
+            color = DEFAULT_PLOTLY_COLORS[idx_num % len(DEFAULT_PLOTLY_COLORS)]
+
+            # Add series line with assigned color
+            fig.add_trace(go.Scatter(
+                x=series_x,
+                y=series[i],
+                mode='lines',
+                name=f"Series {i}",
+                line={'color': color}
+            ))
+
+            # Generate dummy matches
+            matches = generate_dummy_matches(series[[i]])[0]
+            rgba_color = rgb_to_rgba(color, alpha=0.3)
+
+            for start, end, _ in matches:
+                all_shapes.append({
+                    'type': 'rect',
+                    'xref': 'x',
+                    'yref': 'paper',
+                    'x0': series_x[start],
+                    'x1': series_x[min(end, len(series_x) - 1)],
+                    'y0': 0,
+                    'y1': 1,
+                    'fillcolor': rgba_color,
+                    'line': {'width': 0},
+                    'layer': 'below'
+                })
+
+        fig.update_layout(
+            title="Selected Series with Highlighted Matches",
+            shapes=all_shapes,
+            margin=dict(t=30)
+        )
         return fig
 
     @app.callback(

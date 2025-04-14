@@ -26,3 +26,13 @@ def parse_and_interpolate_path(path_str, output_length=30):
     y_interp = interp_func(x_uniform)
 
     return y_interp
+
+
+def rgb_to_rgba(rgb_str, alpha=0.3):
+    """Convert 'rgb(r, g, b)' to 'rgba(r, g, b, alpha)'"""
+    import re
+    match = re.match(r'rgb\((\d+),\s*(\d+),\s*(\d+)\)', rgb_str)
+    if not match:
+        raise ValueError(f"Invalid RGB format: {rgb_str}")
+    r, g, b = match.groups()
+    return f'rgba({r}, {g}, {b}, {alpha})'

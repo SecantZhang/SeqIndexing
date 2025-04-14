@@ -9,6 +9,8 @@ colors:
   primary: "#007BFF"
   background: "#FFFFFF"
   border: "#ccc"
+  match_opacity: 0.3
+  match_color: 'rgba(0, 123, 255, 0.3)'
 
 layout:
   preview_height: 60

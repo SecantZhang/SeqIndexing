@@ -19,6 +19,8 @@ BACKGROUND_COLOR = config["colors"]["background"]
 BORDER_COLOR = config["colors"]["border"]
 SELECTED_BORDER = f"3px solid {PRIMARY_COLOR}"
 UNSELECTED_BORDER = f"1px solid {BORDER_COLOR}"
+MATCH_COLOR = config["colors"]["match_color"]
+MATCH_COLOR_OPACITY = config["colors"]["match_opacity"]
 
 # Layout
 PREVIEW_HEIGHT = config["layout"]["preview_height"]

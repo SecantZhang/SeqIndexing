@@ -1,14 +1,10 @@
 from dash import Input, Output, State, callback_context, ALL
 from dash import html, dcc
-from .data import series, series_x, generate_dummy_matches
+from .data import series, series_x
 from .config import SERIES_WINDOW_SIZE
-from .utils import parse_and_interpolate_path, rgb_to_rgba
+from .utils import parse_and_interpolate_path
 import dash
 import plotly.graph_objs as go
-from plotly.colors import DEFAULT_PLOTLY_COLORS
-from plotly.graph_objects import Layout, Scatter
-
-import re
 import numpy as np
 import json
 
@@ -78,7 +74,7 @@ def register_callbacks(app):
             selected.add(index_str)
         return list(selected)
 
-    # Update main plot
+    # Update main plot with highlight intervals
     @app.callback(
         Output("example-plot", "figure"),
         Input("selected-series-store", "data")
@@ -91,44 +87,67 @@ def register_callbacks(app):
             }
 
         fig = go.Figure()
-        all_shapes = []
+        # Define a list of colors to use for highlighting (cycled based on series index)
+        color_list = ['blue', 'red', 'green', 'orange', 'purple']
+        # Get the x-axis domain from series_x
+        x_min = min(series_x)
+        x_max = max(series_x)
+        x_range = x_max - x_min
 
-        for idx_num, idx in enumerate(selected_indices):
+        # ==============================================================================
+        # For future modification:
+        #
+        # Instead of generating random intervals, you may want your algorithm to return
+        # highlight intervals in the following format:
+        #
+        #   pattern_intervals_config = {
+        #       <series index>: [
+        #           {'start': <x_start>, 'end': <x_end>, 'annotation': "Optional Label"},
+        #           {'start': <x_start>, 'end': <x_end>, 'annotation': "Optional Label"}
+        #       ],
+        #       ...
+        #   }
+        #
+        # You can then simply assign pattern_intervals_config to that result.
+        # For now, we leave this dictionary empty to trigger the random interval fallback.
+        # ==============================================================================
+        pattern_intervals_config = {}  # Future: assign your algorithm's intervals here
+
+        for idx in selected_indices:
             i = int(idx)
-            color = DEFAULT_PLOTLY_COLORS[idx_num % len(DEFAULT_PLOTLY_COLORS)]
+            # Add the main series trace.
+            fig.add_trace(go.Scatter(x=series_x, y=series[i], mode='lines', name=f"Series {i}"))
 
-            # Add series line with assigned color
-            fig.add_trace(go.Scatter(
-                x=series_x,
-                y=series[i],
-                mode='lines',
-                name=f"Series {i}",
-                line={'color': color}
-            ))
+            # Determine the highlight intervals:
+            if i in pattern_intervals_config and pattern_intervals_config[i]:
+                intervals = pattern_intervals_config[i]
+            else:
+                # Fallback: Generate two random intervals for this series.
+                intervals = []
+                for _ in range(2):
+                    start = np.random.uniform(x_min, x_max - 0.1 * x_range)
+                    length = np.random.uniform(0.05 * x_range, 0.1 * x_range)
+                    end = start + length
+                    intervals.append({'start': start, 'end': end, 'annotation': None})
 
-            # Generate dummy matches
-            matches = generate_dummy_matches(series[[i]])[0]
-            rgba_color = rgb_to_rgba(color, alpha=0.3)
+            # Add vertical rectangles based on the intervals.
+            color = color_list[i % len(color_list)]
+            for j, interval in enumerate(intervals, start=1):
+                annotation_text = interval.get('annotation')
+                if annotation_text is None:
+                    annotation_text = f"Series {i} Pattern {j}"
+                fig.add_vrect(
+                    x0=interval['start'],
+                    x1=interval['end'],
+                    fillcolor=color,
+                    opacity=0.2,
+                    layer='below',
+                    line_width=0,
+                    annotation_text=annotation_text,
+                    annotation_position='top left'
+                )
 
-            for start, end, _ in matches:
-                all_shapes.append({
-                    'type': 'rect',
-                    'xref': 'x',
-                    'yref': 'paper',
-                    'x0': series_x[start],
-                    'x1': series_x[min(end, len(series_x) - 1)],
-                    'y0': 0,
-                    'y1': 1,
-                    'fillcolor': rgba_color,
-                    'line': {'width': 0},
-                    'layer': 'below'
-                })
-
-        fig.update_layout(
-            title="Selected Series with Highlighted Matches",
-            shapes=all_shapes,
-            margin=dict(t=30)
-        )
+        fig.update_layout(title="Selected Series", margin=dict(t=30))
         return fig
 
     @app.callback(

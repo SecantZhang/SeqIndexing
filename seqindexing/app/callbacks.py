@@ -144,7 +144,20 @@ def register_callbacks(app):
                     annotation_position='top left'
                 )
 
-        fig.update_layout(title="Selected Series with Highlighted Matches", margin=dict(t=30))
+        # Enable a numeric range slider.
+        fig.update_layout(
+            title="Selected Series with Highlighted Matches",
+            margin=dict(t=30),
+            xaxis=dict(
+                rangeslider=dict(
+                    visible=True
+                ),
+                # If your x-axis is time-based, set 'type': 'date' and add 'rangeselector'
+                # If numeric, just keep 'type': 'linear'.
+                type='linear'
+            )
+        )
+
         return fig
 
     @app.callback(

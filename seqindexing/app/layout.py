@@ -71,13 +71,6 @@ layout = html.Div([
 
             # Right Panel (7/10)
             html.Div([
-                dcc.Tabs(
-                    id="sketch-tab-manager",
-                    value=None,  # no tab selected at first
-                    children=[],
-                    persistence=True,
-                    persistence_type="session"
-                ),
                 dcc.Store(id="sketch-history-store", data={}),
                 dcc.Store(id="active-sketch-id", data=None),
 
@@ -86,73 +79,65 @@ layout = html.Div([
                     'fontSize': LABEL_FONT_SIZE,
                     'marginBottom': '10px'
                 }),
-                dcc.Graph(
-                    id='sketch-graph',
-                    config={
-                        'modeBarButtonsToAdd': [
-                            'drawline',
-                            'drawopenpath',
-                            'drawclosedpath',
-                            'drawcircle',
-                            'drawrect',
-                            'eraseshape'
-                        ],
-                        'editable': True,
-                        'scrollZoom': True
-                    },
-                    figure={
-                        'layout': {
-                            'dragmode': 'drawopenpath',
-                            'newshape': {
-                                'line': {'color': 'red'},
-                                'fillcolor': 'rgba(0,0,0,0)',
-                                'opacity': 0.5
-                            },
-                            'margin': {'l': 0, 'r': 0, 't': 0, 'b': 0},
-                            'xaxis': {'visible': False},
-                            'yaxis': {'visible': False},
-                            'shapes': []
-                        }
-                    },
-                    style={
-                        'height': '400px',
-                        'border': '1px solid #ccc'
-                    }
-                ),
+                html.Div([
+                    html.H4("History", style={'fontSize': LABEL_FONT_SIZE, 'marginBottom': '4px'}),
+                    html.Div(id="sketch-history-list", style={
+                        'display': 'flex',
+                        'flexWrap': 'wrap',
+                        'gap': '6px',
+                        'marginBottom': '10px'
+                    })
+                ]),
+                dcc.Store(id="sketch-refresh-key", data=0),  # allows forced re-render
+                html.Div(id="sketch-graph-container"),  # placeholder for dynamic sketchpad
                 dcc.Store(id='sketch-shape-store'),
                 dcc.Store(id='distance-threshold-store', data=1.0),
                 html.Button("Submit", id="submit-sketch", n_clicks=0, style={
                     'marginTop': '10px',
                     'fontSize': SMALL_FONT_SIZE
                 }),
+                html.Button("Clear", id="refresh-sketch", n_clicks=0, style={
+                    'marginTop': '6px',
+                    'fontSize': SMALL_FONT_SIZE,
+                    'marginLeft': '6px'
+                }),
                 html.Div([
                     html.Div([
                         dcc.Graph(
                             id="distance-histogram",
                             config={"displayModeBar": False},
-                            style={"height": "90px", "padding": "0", "margin": "0"}
+                            style={
+                                "height": "80px",
+                                "margin": "0",
+                                "padding": "0"
+                            }
                         ),
                         dcc.Slider(
                             id="distance-threshold-slider",
                             min=0,
-                            max=1,
+                            max=6,
                             step=0.01,
                             value=1.0,
-                            tooltip={"always_visible": False},
+                            # tooltip={"always_visible": False},
                             updatemode="drag",
                             className="custom-slider",
-                            marks={}
+                            marks={
+                                0: '0',
+                                6: 'Max'
+                            },  # keep it clean
+                            included=False  # remove fill color
                         )
                     ], style={
+                        'display': 'flex',
+                        'flexDirection': 'column',
+                        'gap': '6px',
                         'marginTop': '10px',
-                        'padding': '4px 0',
-                        'width': '100%',
-                        'boxSizing': 'border-box'
+                        'padding': '0 6px'
                     })
                 ], style={
                     'marginTop': '12px',
-                    'padding': '6px',
-                    'borderTop': '1px solid #ccc',
+                    'padding': '6px 0',
+                    'borderTop': '1px solid #eee',
                     'height': '140px'
                 })
             ], style={

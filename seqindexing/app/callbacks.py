@@ -84,6 +84,7 @@ def register_callbacks(app):
         State('selected-series-store', 'data')
     )
     def toggle_selection(n_clicks_list, current_selected):
+        print(f"toggle selection callback triggered, n_clicks_list={n_clicks_list}, current_selected={current_selected}")
         ctx = callback_context
         if not ctx.triggered or all(n is None for n in n_clicks_list):
             return current_selected
@@ -166,12 +167,22 @@ def register_callbacks(app):
         Output("distance-histogram", "figure"),
         Output("distance-threshold-slider", "max"),
         Output("distance-threshold-slider", "value"),
+        Output("sketch-history-store", "data"),
+        Output("active-sketch-id", "data"),
         Input("submit-sketch", "n_clicks"),
-        State("sketch-shape-store", "data")
+        State("sketch-shape-store", "data"),
+        State("sketch-history-store", "data")
     )
-    def submit_sketch(n_clicks, shapes):
+    def submit_sketch(n_clicks, shapes, history):
+        print(f"submit sketch triggered, n_clicks={n_clicks}, shapes={shapes}")
         if not n_clicks or not shapes:
             raise dash.exceptions.PreventUpdate
+
+        sketch_id = str(uuid.uuid4())
+        history = history if len(history) != 0 else {}
+        history[sketch_id] = shapes
+
+        print(f"current history - {len(history)}: {history}")
 
         sketch = np.array(shapes)
         topk_matches = generate_dummy_matches(series)
@@ -201,20 +212,20 @@ def register_callbacks(app):
             margin=dict(t=8, b=8, l=8, r=8),
             height=90,
             bargap=0.2,
-            xaxis=dict(
-                title="Distance",
-                title_font=dict(size=11, color='#333'),
-                tickfont=dict(size=9),
-                zeroline=False,
-                showgrid=False
-            ),
-            yaxis=dict(
-                title="Count",
-                title_font=dict(size=11, color='#333'),
-                tickfont=dict(size=9),
-                zeroline=False,
-                showgrid=False
-            ),
+            # xaxis=dict(
+            #     title="Distance",
+            #     title_font=dict(size=11, color='#333'),
+            #     tickfont=dict(size=9),
+            #     zeroline=False,
+            #     showgrid=False
+            # ),
+            # yaxis=dict(
+            #     title="Count",
+            #     title_font=dict(size=11, color='#333'),
+            #     tickfont=dict(size=9),
+            #     zeroline=False,
+            #     showgrid=False
+            # ),
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
             showlegend=False
@@ -225,7 +236,9 @@ def register_callbacks(app):
             formatted,
             hist_fig,
             max_dist,
-            max_dist
+            max_dist,
+            history,
+            sketch_id
         )
 
     @app.callback(
@@ -246,3 +259,96 @@ def register_callbacks(app):
     )
     def update_threshold_store(value):
         return value
+
+    @app.callback(
+        Output("sketch-graph-container", "children"),
+        Input("sketch-refresh-key", "data"),
+    )
+    def render_sketch_graph(refresh_key):
+        print("sketch area rendered with refresh key {}".format(refresh_key))
+        return html.Div([
+            dcc.Graph(
+                id='sketch-graph',
+                config={
+                    'modeBarButtonsToAdd': [
+                        'drawline', 'drawopenpath', 'drawclosedpath',
+                        'drawcircle', 'drawrect', 'eraseshape'
+                    ],
+                    'editable': True,
+                    'scrollZoom': True
+                },
+                figure={
+                    'layout': {
+                        'dragmode': 'drawopenpath',
+                        'newshape': {
+                            'line': {'color': 'red'},
+                            'fillcolor': 'rgba(0,0,0,0)',
+                            'opacity': 0.5
+                        },
+                        'margin': {'l': 0, 'r': 0, 't': 0, 'b': 0},
+                        'xaxis': {'visible': False},
+                        'yaxis': {'visible': False},
+                        'shapes': []
+                    }
+                },
+                style={
+                    'height': '400px',
+                    'border': '1px solid #ccc'
+                }
+            )
+        ], key=str(refresh_key))
+
+    @app.callback(
+        Output("sketch-refresh-key", "data"),
+        Input("refresh-sketch", "n_clicks"),
+        State("sketch-refresh-key", "data"),
+        prevent_initial_call=True
+    )
+    def refresh_sketch_view(n_clicks, current_key):
+        print(f"sketch area refreshed, current key: {current_key}")
+        return current_key + 1  # just bump the key to remount the component
+
+    @app.callback(
+        Output("sketch-history-list", "children"),
+        Input("sketch-history-store", "data")
+    )
+    def render_sketch_history(history):
+        if not history:
+            return []
+
+        preview_components = []
+        for sketch_id, y_values in history.items():
+            preview_fig = {
+                'data': [{
+                    'x': list(range(len(y_values))),
+                    'y': y_values,
+                    'mode': 'lines',
+                    'line': {'width': 1, 'color': '#444'}
+                }],
+                'layout': {
+                    'height': 40,
+                    'margin': {'l': 0, 'r': 0, 't': 0, 'b': 0},
+                    'xaxis': {'visible': False},
+                    'yaxis': {'visible': False},
+                    'showlegend': False,
+                    'dragmode': False,
+                    'hovermode': False
+                }
+            }
+
+            preview_components.append(html.Div([
+                dcc.Graph(
+                    figure=preview_fig,
+                    config={'staticPlot': True, 'displayModeBar': False},
+                    style={'height': '40px', 'width': '80px'}
+                )
+            ], id={'type': 'history-card', 'index': sketch_id},
+                n_clicks=0,
+                style={
+                    'border': '1px solid #ccc',
+                    'borderRadius': '4px',
+                    'padding': '2px',
+                    'cursor': 'pointer'
+                }))
+
+        return preview_components

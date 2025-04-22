@@ -1,8 +1,8 @@
 from dash import Input, Output, State, callback_context, ALL
 from dash import html, dcc
-from .data import series, series_x, generate_dummy_matches
+from .data import series, query_chroma_topk, generate_dummy_matches
 from .config import SERIES_WINDOW_SIZE
-from .utils import parse_and_interpolate_path
+from .utils import parse_and_interpolate_path, get_color_palette
 import dash
 import plotly.graph_objs as go
 import numpy as np
@@ -14,46 +14,69 @@ def register_callbacks(app):
         Output('series-selector-container', 'children'),
         Input('selected-series-store', 'data'),
         Input('match-results-store', 'data'),
-        Input('distance-threshold-store', 'data')
+        Input('distance-threshold-store', 'data'),
+        Input('series-name-filter', 'value')
     )
-    def update_series_preview_list(selected, match_data, threshold):
+    def update_series_preview_list(selected, match_data, threshold, filtered_names):
         children = []
-        color_list = ['blue', 'red', 'green', 'orange', 'purple']
-        x_max = max(series_x)
+        color_list = get_color_palette(series["shape"][0])
+        x_max = max(series["x"])
+        titles = series["titles"]
+        name_to_index = {name: i for i, name in enumerate(titles)}
 
-        for i in range(len(series)):
+        # --- CASE 1: match_data is empty or None ---
+        if not match_data:
+            sorted_names = sorted(titles)[:10]  # top 10 alphabetically
+        else:
+            # --- CASE 2: match_data available → rank by match count ---
+            match_counts = {
+                name: sum(1 for matches in match_data[name].values() for m in matches if m['score'] <= threshold)
+                for name in match_data
+            }
+
+            # Keep only names with at least 1 match
+            filtered = {name: count for name, count in match_counts.items() if count > 0}
+            sorted_names = sorted(filtered, key=lambda n: -filtered[n])  # sort by count descending
+
+        for name in sorted_names:
+            if filtered_names and name not in filtered_names:
+                continue
+            i = name_to_index[name]
             is_selected = str(i) in selected
             border_style = '3px solid #007BFF' if is_selected else '1px solid #ccc'
             color = color_list[i % len(color_list)]
 
-            intervals = [
-                m for m in match_data.get(str(i), [])
-                if m['score'] <= threshold
-            ]
-            shapes = [
-                {
-                    'type': 'rect',
-                    'xref': 'x',
-                    'yref': 'paper',
-                    'x0': interval['start'],
-                    'x1': min(interval['end'], x_max),
-                    'y0': 0,
-                    'y1': 1,
-                    'fillcolor': color,
-                    'opacity': 0.2,
-                    'line': {'width': 0},
-                    'layer': 'below'
-                }
-                for interval in intervals
-            ]
+            shapes = []
+
+            if match_data and name in match_data:
+                all_intervals = [
+                    match for matches in match_data[name].values()
+                    for match in matches if match["score"] <= threshold
+                ]
+                shapes = [
+                    {
+                        'type': 'rect',
+                        'xref': 'x',
+                        'yref': 'paper',
+                        'x0': series["x"][interval['start_idx']],
+                        'x1': min(series["x"][interval['end_idx']], x_max),
+                        'y0': 0,
+                        'y1': 1,
+                        'fillcolor': color,
+                        'opacity': 0.2,
+                        'line': {'width': 0},
+                        'layer': 'below'
+                    }
+                    for interval in all_intervals
+                ]
 
             children.append(html.Div([
                 dcc.Graph(
                     id={'type': 'series-preview', 'index': i},
                     figure={
                         'data': [{
-                            'x': series_x[::10],
-                            'y': series[i][::10],
+                            'x': series["x"][::10],
+                            'y': series["y"][i][::10],
                             'mode': 'lines',
                             'line': {'width': 1, 'color': color}
                         }],
@@ -69,13 +92,14 @@ def register_callbacks(app):
                     config={'staticPlot': True, 'displayModeBar': False},
                     style={'cursor': 'pointer', 'height': '40px'}
                 ),
-                html.Div(f"Series {i}", style={'textAlign': 'center', 'fontSize': '12px'})
+                html.Div(f"{name}", style={'textAlign': 'center', 'fontSize': '12px'})
             ], id={'type': 'series-card', 'index': i}, n_clicks=0, style={
                 'border': border_style,
                 'borderRadius': '6px',
                 'padding': '4px',
                 'backgroundColor': '#fff'
             }))
+
         return children
 
     @app.callback(
@@ -114,47 +138,49 @@ def register_callbacks(app):
             }
 
         fig = go.Figure()
-        color_list = ['blue', 'red', 'green', 'orange', 'purple']
-        x_max = max(series_x)
+        color_list = get_color_palette(series["shape"][0])
+        x_max = max(series["x"])
+        titles = series["titles"]
 
         for idx_num, idx in enumerate(selected_indices):
             i = int(idx)
+            name = titles[i]
             color = color_list[i % len(color_list)]
 
+            # Add the main line plot
             fig.add_trace(go.Scatter(
-                x=series_x,
-                y=series[i],
+                x=series["x"],
+                y=series["y"][i],
                 mode='lines',
-                name=f"Series {i}",
+                name=name,
                 line={'color': color}
             ))
 
-            intervals = [
-                m for m in match_data.get(str(i), [])
-                if m['score'] <= threshold
-            ]
-            for j, interval in enumerate(intervals, start=1):
-                fig.add_vrect(
-                    x0=interval['start'],
-                    x1=min(interval['end'], x_max),
-                    fillcolor=color,
-                    opacity=0.2,
-                    layer='below',
-                    line_width=0,
-                    annotation_text=f"Series {i} Match {j}",
-                    annotation_position='top left'
-                )
+            # Draw match intervals if match data exists for this name
+            if match_data and name in match_data:
+                all_intervals = [
+                    match for matches in match_data[name].values()
+                    for match in matches if match["score"] <= threshold
+                ]
 
-        # Enable a numeric range slider.
+                for j, interval in enumerate(all_intervals, start=1):
+                    fig.add_vrect(
+                        x0=series["x"][interval["start_idx"]],
+                        x1=min(series["x"][interval["end_idx"]], x_max),
+                        fillcolor=color,
+                        opacity=0.2,
+                        layer='below',
+                        line_width=0,
+                        annotation_text=f"Match {j}",
+                        annotation_position='top left'
+                    )
+
+        # Add layout with range slider
         fig.update_layout(
             title="Selected Series with Highlighted Matches",
             margin=dict(t=30),
             xaxis=dict(
-                rangeslider=dict(
-                    visible=True
-                ),
-                # If your x-axis is time-based, set 'type': 'date' and add 'rangeselector'
-                # If numeric, just keep 'type': 'linear'.
+                rangeslider=dict(visible=True),
                 type='linear'
             )
         )
@@ -169,41 +195,55 @@ def register_callbacks(app):
         Output("distance-threshold-slider", "value"),
         Output("sketch-history-store", "data"),
         Output("active-sketch-id", "data"),
+        Output("auto-select-series", "data"),  # ✅ new output
         Input("submit-sketch", "n_clicks"),
         State("sketch-shape-store", "data"),
-        State("sketch-history-store", "data")
+        State("sketch-history-store", "data"),
+        State("window-size-store", "data"),
+        prevent_initial_call=True
     )
-    def submit_sketch(n_clicks, shapes, history):
-        print(f"submit sketch triggered, n_clicks={n_clicks}, shapes={shapes}")
+    def submit_sketch(n_clicks, shapes, history, window_size):
         if not n_clicks or not shapes:
             raise dash.exceptions.PreventUpdate
 
         sketch_id = str(uuid.uuid4())
-        history = history if len(history) != 0 else {}
+        history = history or {}
         history[sketch_id] = shapes
-
-        print(f"current history - {len(history)}: {history}")
+        print(history)
+        name_to_index = {name: i for i, name in enumerate(series["titles"])}
 
         sketch = np.array(shapes)
-        topk_matches = generate_dummy_matches(series)
+        # topk_matches = generate_dummy_matches(history)
+        topk_matches = query_chroma_topk(history)
 
-        # Flatten all distances
-        all_scores = [score for row in topk_matches for (_, _, score) in row]
+        all_scores = [match["score"] for matches in topk_matches.values() for match in matches]
         max_dist = max(all_scores) if all_scores else 1.0
 
-        # Format results
-        formatted = {
-            str(i): [{"start": series_x[start], "end": series_x[min(end, len(series_x) - 1)], "score": float(score)}
-                     for start, end, score in matches]
-            for i, matches in enumerate(topk_matches)
-        }
+        reformatted = {}
 
-        # Histogram
+        for curr_uuid, matches in topk_matches.items():
+            for match in matches:
+                name = match["name"]
+                entry = {
+                    "start_idx": match["start_idx"],
+                    "end_idx": match["end_idx"],
+                    "score": match["score"],
+                    "window_size": match["end_idx"] - match["start_idx"]
+                }
+
+                # Initialize levels as needed
+                if name not in reformatted:
+                    reformatted[name] = {}
+                if curr_uuid not in reformatted[name]:
+                    reformatted[name][curr_uuid] = []
+
+                reformatted[name][curr_uuid].append(entry)
+
         hist_fig = go.Figure()
         hist_fig.add_trace(go.Histogram(
             x=all_scores,
             nbinsx=30,
-            marker_color="rgba(33, 150, 243, 0.4)",  # blue
+            marker_color="rgba(33, 150, 243, 0.4)",
             marker_line_color="rgba(33, 150, 243, 1)",
             marker_line_width=1,
             opacity=0.85
@@ -212,33 +252,30 @@ def register_callbacks(app):
             margin=dict(t=8, b=8, l=8, r=8),
             height=90,
             bargap=0.2,
-            # xaxis=dict(
-            #     title="Distance",
-            #     title_font=dict(size=11, color='#333'),
-            #     tickfont=dict(size=9),
-            #     zeroline=False,
-            #     showgrid=False
-            # ),
-            # yaxis=dict(
-            #     title="Count",
-            #     title_font=dict(size=11, color='#333'),
-            #     tickfont=dict(size=9),
-            #     zeroline=False,
-            #     showgrid=False
-            # ),
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
             showlegend=False
         )
 
+        matched_indices = set()
+
+        for name, uuid_dict in reformatted.items():
+            idx = name_to_index.get(name)
+            if idx is not None:
+                matched_indices.add(str(idx))
+
+        matched_series = list(matched_indices)
+        print(f"current window_size = {window_size}")
+
         return (
             f"Submitted ({len(shapes)} shape{'s' if len(shapes) != 1 else ''})",
-            formatted,
+            reformatted,
             hist_fig,
             max_dist,
             max_dist,
             history,
-            sketch_id
+            sketch_id,
+            matched_series  # send to auto-select
         )
 
     @app.callback(
@@ -352,3 +389,11 @@ def register_callbacks(app):
                 }))
 
         return preview_components
+
+    @app.callback(
+        Output("window-size-store", "data"),
+        Input("window-size-slider", "value")
+    )
+    def update_window_size(val):
+        print(f"slider updated with value = {val}")
+        return val

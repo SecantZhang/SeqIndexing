@@ -1,10 +1,65 @@
+import os
 import numpy as np
+import pandas as pd
 from numpy.linalg import norm
 np.random.seed(0)
 
+from chromadb import PersistentClient
+from chromadb.errors import InvalidCollectionException
+from .utils import interpolate_to_fixed_size
 
-series = np.cumsum(np.random.randn(10, 365), axis=1)
-series_x = np.arange(365)
+
+CSV_PATH = "/home/zzt7020/NUDB/SeqIndexing/data/sp500.csv"
+
+df = (
+    pd.read_csv(CSV_PATH, parse_dates=["Date"])
+    .set_index("Date")
+    .dropna(axis=1)
+    .iloc[:, :100]
+)
+
+series_y = df.T.to_numpy()
+
+series = {
+    "y": series_y,
+    "x": np.arange(df.shape[0]),
+    "titles": df.columns.tolist(),
+    "shape": series_y.shape
+}
+
+
+def query_chroma_topk(histories: dict[str, list[float]], k: int = 100):
+    print(os.getcwd())
+    # Initialize ChromaDB client and collection
+    client = PersistentClient(path="./seqindexing/data/chroma_db")
+    collection = client.get_collection("sp500_series")
+
+    all_results = {}
+
+    for sketch_id, vector in histories.items():
+        interpolated = interpolate_to_fixed_size(np.array(vector), target_size=32)
+
+        # Perform search (L2 distance is default in collection setup)
+        results = collection.query(
+            query_embeddings=[interpolated.tolist()],
+            n_results=k
+        )
+
+        hits = []
+        for doc, score, meta in zip(results["documents"][0], results["distances"][0], results["metadatas"][0]):
+            hits.append({
+                "score": score,
+                "title": doc,
+                "name": meta["name"],
+                "start_date": meta["start_date"],
+                "end_date": meta["end_date"],
+                "start_idx": meta["start_idx"],
+                "end_idx": meta["end_idx"]
+            })
+
+        all_results[sketch_id] = hits
+
+    return all_results
 
 
 def generate_dummy_matches(series, sub_len=64, n_subs=3, pattern=None):

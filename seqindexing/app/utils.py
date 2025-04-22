@@ -1,6 +1,7 @@
 import re
 import numpy as np
 from scipy.interpolate import interp1d
+from plotly.colors import qualitative
 
 
 def parse_and_interpolate_path(path_str, output_length=30):
@@ -36,3 +37,14 @@ def rgb_to_rgba(rgb_str, alpha=0.3):
         raise ValueError(f"Invalid RGB format: {rgb_str}")
     r, g, b = match.groups()
     return f'rgba({r}, {g}, {b}, {alpha})'
+
+
+def get_color_palette(n):
+    palette = qualitative.Plotly  # ['#1f77b4', '#ff7f0e', ...]
+    return [palette[i % len(palette)] for i in range(n)]
+
+
+def interpolate_to_fixed_size(arr, target_size=32):
+    x_old = np.linspace(0, 1, num=len(arr))
+    x_new = np.linspace(0, 1, num=target_size)
+    return np.interp(x_new, x_old, arr)

@@ -1,7 +1,7 @@
 from dash import dcc, html
 from dash_canvas import DashCanvas
 from .layout_components import generate_series_previews
-from .data import series, series_x
+from .data import series
 from .config import (
     FONT_FAMILY, TITLE_FONT_SIZE, LABEL_FONT_SIZE, PREVIEW_FONT_SIZE, SMALL_FONT_SIZE,
     PREVIEW_HEIGHT, PREVIEW_CARD_HEIGHT,
@@ -24,7 +24,7 @@ layout = html.Div([
         dcc.Graph(
             id="example-plot",
             figure={
-                'data': [{'x': series_x, 'y': series[0], 'type': 'line', 'name': 'Sample'}],
+                'data': [{'x': series["x"], 'y': series["y"][0], 'type': 'line', 'name': 'Sample'}],
                 'layout': {'title': 'Example Plot'}
             },
             style={
@@ -40,6 +40,7 @@ layout = html.Div([
 
         # Bottom Panel: Series Selector + Sketch Area
         html.Div([
+            dcc.Store(id="auto-select-series", data=[]),
             # Left Panel (3/10)
             html.Div([
                 html.H3("Select Series", style={
@@ -79,6 +80,17 @@ layout = html.Div([
                     'fontSize': LABEL_FONT_SIZE,
                     'marginBottom': '10px'
                 }),
+                dcc.Dropdown(
+                    id='series-name-filter',
+                    options=[{'label': name, 'value': name} for name in series["titles"]],
+                    value=[],  # all selected by default
+                    multi=True,
+                    placeholder="Select stock names to display...",
+                    style={
+                        'fontSize': '12px',
+                        'maxHeight': '60px'
+                    }
+                ),
                 html.Div([
                     html.H4("History", style={'fontSize': LABEL_FONT_SIZE, 'marginBottom': '4px'}),
                     html.Div(id="sketch-history-list", style={
@@ -92,14 +104,53 @@ layout = html.Div([
                 html.Div(id="sketch-graph-container"),  # placeholder for dynamic sketchpad
                 dcc.Store(id='sketch-shape-store'),
                 dcc.Store(id='distance-threshold-store', data=1.0),
-                html.Button("Submit", id="submit-sketch", n_clicks=0, style={
+                dcc.Store(id="window-size-store", data=7),
+                html.Div([
+                    # Buttons
+                    html.Button("Submit", id="submit-sketch", n_clicks=0, style={
+                        'fontSize': SMALL_FONT_SIZE,
+                        'marginRight': '6px'
+                    }),
+                    html.Button("Clear", id="refresh-sketch", n_clicks=0, style={
+                        'fontSize': SMALL_FONT_SIZE,
+                        'marginRight': '10px'
+                    }),
+
+                    html.Div([
+                        html.Label("Window Size", style={
+                            'fontSize': SMALL_FONT_SIZE,
+                            'marginRight': '8px',
+                            'whiteSpace': 'nowrap'
+                        }),
+                        html.Div(
+                            dcc.Slider(
+                                id="window-size-slider",
+                                min=7,
+                                max=31,
+                                step=1,
+                                value=7,
+                                marks={7: '7', 19: '19', 31: '31'},
+                                tooltip={"always_visible": False},
+                                included=False,
+                                className="custom-slider"
+                            ),
+                            style={
+                                'flexGrow': 1,
+                                'minWidth': '250px',
+                                'maxWidth': '100%',
+                            }
+                        )
+                    ], style={
+                        'display': 'flex',
+                        'alignItems': 'center',
+                        'width': '100%',
+                        'gap': '12px'
+                    }),
+                ], style={
+                    'display': 'flex',
+                    'alignItems': 'center',
                     'marginTop': '10px',
-                    'fontSize': SMALL_FONT_SIZE
-                }),
-                html.Button("Clear", id="refresh-sketch", n_clicks=0, style={
-                    'marginTop': '6px',
-                    'fontSize': SMALL_FONT_SIZE,
-                    'marginLeft': '6px'
+                    'gap': '10px'
                 }),
                 html.Div([
                     html.Div([

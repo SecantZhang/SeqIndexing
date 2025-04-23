@@ -131,10 +131,11 @@ def register_callbacks(app):
     @app.callback(
         Output("example-plot", "figure"),
         Input("selected-series-store", "data"),
-        Input('distance-threshold-store', 'data'),
+        Input("distance-threshold-store", "data"),
+        Input("window-size-slider", "value"),
         State("match-results-store", "data")
     )
-    def update_main_plot(selected_indices, threshold, match_data):
+    def update_main_plot(selected_indices, threshold, window_size_range, match_data):
         if not selected_indices:
             return {
                 'data': [],
@@ -146,12 +147,14 @@ def register_callbacks(app):
         x_max = max(series["x"])
         titles = series["titles"]
 
+        min_ws, max_ws = window_size_range
+
         for idx_num, idx in enumerate(selected_indices):
             i = int(idx)
             name = titles[i]
             color = color_list[i % len(color_list)]
 
-            # Add the main line plot
+            # Plot main series line
             fig.add_trace(go.Scatter(
                 x=series["x"],
                 y=series["y"][i],
@@ -160,14 +163,15 @@ def register_callbacks(app):
                 line={'color': color}
             ))
 
-            # Draw match intervals if match data exists for this name
+            # Plot matching highlights
             if match_data and name in match_data:
-                all_intervals = [
+                matches_filtered = [
                     match for matches in match_data[name].values()
-                    for match in matches if match["score"] <= threshold
+                    for match in matches
+                    if match["score"] <= threshold and min_ws <= match["window_size"] <= max_ws
                 ]
 
-                for j, interval in enumerate(all_intervals, start=1):
+                for j, interval in enumerate(matches_filtered, start=1):
                     fig.add_vrect(
                         x0=series["x"][interval["start_idx"]],
                         x1=min(series["x"][interval["end_idx"]], x_max),
@@ -179,7 +183,6 @@ def register_callbacks(app):
                         annotation_position='top left'
                     )
 
-        # Add layout with range slider
         fig.update_layout(
             title="Selected Series with Highlighted Matches",
             margin=dict(t=30),
@@ -433,5 +436,4 @@ def register_callbacks(app):
         max_val = sorted_sizes[-1]
         default_val = [min_val, max_val]
 
-        # ✅ Ensure slider `value` is in `marks` range
-        return min_val, max_val, marks, default_val
+        return min_val, max_val, marks, [min_val, max_val]

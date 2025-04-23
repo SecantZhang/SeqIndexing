@@ -126,16 +126,15 @@ layout = html.Div([
                             dcc.RangeSlider(
                                 id="window-size-slider",
                                 step=None,
-                                marks={},  # will be updated
+                                marks={},  # dynamically set
                                 allowCross=False,
                                 tooltip={"placement": "top", "always_visible": True},
                                 className="custom-slider"
-                                # value is set by callback, so no need to specify here
                             ),
                             style={
                                 'flexGrow': 1,
-                                'minWidth': '250px',
-                                'maxWidth': '100%',
+                                # 'minWidth': '250px',
+                                # 'maxWidth': '100%',
                             }
                         )
                     ], style={

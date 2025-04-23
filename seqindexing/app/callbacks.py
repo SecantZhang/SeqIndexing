@@ -52,27 +52,34 @@ def register_callbacks(app):
 
             # only show shading in the mini‐chart if that card is selected
             shapes = []
-            if is_selected and match_data and name in match_data:
+            if match_data and name in match_data:
                 min_ws, max_ws = window_size_range
-                all_intervals = [
-                    match for matches in match_data[name].values()
-                    for match in matches
-                    if match["score"] <= threshold
-                    and min_ws <= match["window_size"] <= max_ws
-                ]
-                shapes = [{
-                    'type': 'rect',
-                    'xref': 'x',
-                    'yref': 'paper',
-                    'x0': series["x"][match['start_idx']],
-                    'x1': min(series["x"][match['end_idx']], x_max),
-                    'y0': 0,
-                    'y1': 1,
-                    'fillcolor': preview_color,
-                    'opacity': 0.2,
-                    'line': {'width': 0},
-                    'layer': 'below'
-                } for match in all_intervals]
+                pattern_intervals = {
+                    pattern_id: [
+                        match for match in matches
+                        if match["score"] <= threshold and min_ws <= match["window_size"] <= max_ws
+                    ]
+                    for pattern_id, matches in match_data[name].items()
+                }
+                for p_idx, (pattern_id, matches) in enumerate(pattern_intervals.items()):
+                    for match in matches:
+                        shapes.append({
+                            'type': 'rect',
+                            'xref': 'x',
+                            'yref': 'paper',
+                            'x0': series["x"][match['start_idx']],
+                            'x1': min(series["x"][match['end_idx']], x_max),
+                            'y0': 0,
+                            'y1': 1,
+                            'fillcolor': color_list[p_idx % len(color_list)],
+                            'opacity': 0.25,
+                            'line': {
+                                'width': 1,
+                                'color': color_list[p_idx % len(color_list)],
+                                'dash': ['solid', 'dot', 'dash', 'longdash'][p_idx % 4]  # <-- DASH STYLE
+                            },
+                            'layer': 'below'
+                        })
 
             children.append(html.Div([
                 dcc.Graph(
@@ -153,7 +160,7 @@ def register_callbacks(app):
             name = titles[i]
             color = color_list[i % len(color_list)]
 
-            # main line
+            # Draw the main series line
             fig.add_trace(go.Scatter(
                 x=series["x"],
                 y=series["y"][i],
@@ -162,25 +169,24 @@ def register_callbacks(app):
                 line={'color': color}
             ))
 
-            # highlights
             if match_data and name in match_data:
-                matches_filtered = [
-                    m for ms in match_data[name].values()
-                    for m in ms
-                    if m["score"] <= threshold
-                       and min_ws <= m["window_size"] <= max_ws
-                ]
-                for j, interval in enumerate(matches_filtered, start=1):
-                    fig.add_vrect(
-                        x0=series["x"][interval["start_idx"]],
-                        x1=min(series["x"][interval["end_idx"]], x_max),
-                        fillcolor=color,
-                        opacity=0.2,
-                        layer='below',
-                        line_width=0,
-                        annotation_text=f"Match {j}",
-                        annotation_position='top left'
-                    )
+                for p_idx, (pattern_id, matches) in enumerate(match_data[name].items()):
+                    filtered_matches = [
+                        m for m in matches
+                        if m["score"] <= threshold and min_ws <= m["window_size"] <= max_ws
+                    ]
+                    for j, interval in enumerate(filtered_matches, start=1):
+                        fig.add_vrect(
+                            x0=series["x"][interval["start_idx"]],
+                            x1=min(series["x"][interval["end_idx"]], x_max),
+                            fillcolor=color,
+                            opacity=0.25,
+                            layer='below',
+                            line_width=1,
+                            line_dash=['solid', 'dot', 'dash', 'longdash'][p_idx % 4],  # 🎨 dash by pattern
+                            annotation_text=f"Match {j}",
+                            annotation_position='top left'
+                        )
 
         fig.update_layout(
             title="Selected Series with Highlighted Matches",

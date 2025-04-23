@@ -15,7 +15,7 @@ df = (
     pd.read_csv(CSV_PATH, parse_dates=["Date"])
     .set_index("Date")
     .dropna(axis=1)
-    .iloc[:, :100]
+    .iloc[:, :]
 )
 
 series_y = df.T.to_numpy()

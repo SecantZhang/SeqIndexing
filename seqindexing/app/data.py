@@ -54,7 +54,8 @@ def query_chroma_topk(histories: dict[str, list[float]], k: int = 100):
                 "start_date": meta["start_date"],
                 "end_date": meta["end_date"],
                 "start_idx": meta["start_idx"],
-                "end_idx": meta["end_idx"]
+                "end_idx": meta["end_idx"],
+                "window_size": meta["window_size"]
             })
 
         all_results[sketch_id] = hits

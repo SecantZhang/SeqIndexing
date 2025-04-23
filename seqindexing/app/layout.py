@@ -123,16 +123,14 @@ layout = html.Div([
                             'whiteSpace': 'nowrap'
                         }),
                         html.Div(
-                            dcc.Slider(
+                            dcc.RangeSlider(
                                 id="window-size-slider",
-                                min=7,
-                                max=31,
-                                step=1,
-                                value=7,
-                                marks={7: '7', 19: '19', 31: '31'},
-                                tooltip={"always_visible": False},
-                                included=False,
+                                step=None,
+                                marks={},  # will be updated
+                                allowCross=False,
+                                tooltip={"placement": "top", "always_visible": True},
                                 className="custom-slider"
+                                # value is set by callback, so no need to specify here
                             ),
                             style={
                                 'flexGrow': 1,

@@ -15,9 +15,10 @@ def register_callbacks(app):
         Input('selected-series-store', 'data'),
         Input('match-results-store', 'data'),
         Input('distance-threshold-store', 'data'),
-        Input('series-name-filter', 'value')
+        Input('series-name-filter', 'value'),
+        Input('window-size-slider', 'value')  # ✅ NEW
     )
-    def update_series_preview_list(selected, match_data, threshold, filtered_names):
+    def update_series_preview_list(selected, match_data, threshold, filtered_names, window_size_range):
         children = []
         color_list = get_color_palette(series["shape"][0])
         x_max = max(series["x"])
@@ -49,9 +50,12 @@ def register_callbacks(app):
             shapes = []
 
             if match_data and name in match_data:
+                min_ws, max_ws = window_size_range
+
                 all_intervals = [
                     match for matches in match_data[name].values()
-                    for match in matches if match["score"] <= threshold
+                    for match in matches
+                    if match["score"] <= threshold and min_ws <= match["window_size"] <= max_ws
                 ]
                 shapes = [
                     {
@@ -397,3 +401,37 @@ def register_callbacks(app):
     def update_window_size(val):
         print(f"slider updated with value = {val}")
         return val
+
+    @app.callback(
+        Output("window-size-slider", "min"),
+        Output("window-size-slider", "max"),
+        Output("window-size-slider", "marks"),
+        Output("window-size-slider", "value"),
+        Input("match-results-store", "data")
+    )
+    def update_window_size_slider(match_data):
+        default_marks = {7: "7", 15: "15", 30: "30"}
+        default_range = [7, 30]
+
+        if not match_data:
+            return 7, 30, default_marks, default_range
+
+        # Extract unique window sizes
+        window_sizes = {
+            match["window_size"]
+            for matches_by_uuid in match_data.values()
+            for matches in matches_by_uuid.values()
+            for match in matches
+        }
+
+        if not window_sizes:
+            return 7, 30, default_marks, default_range
+
+        sorted_sizes = sorted(window_sizes)
+        marks = {size: str(size) for size in sorted_sizes}
+        min_val = sorted_sizes[0]
+        max_val = sorted_sizes[-1]
+        default_val = [min_val, max_val]
+
+        # ✅ Ensure slider `value` is in `marks` range
+        return min_val, max_val, marks, default_val

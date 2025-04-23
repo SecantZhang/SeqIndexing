@@ -1,7 +1,7 @@
 # Themes related configurations
 fonts:
   family: "Arial, sans-serif"
-  title_size: "28px"
+  title_size: "20px"
   label_size: "14px"
   small_size: "11px"
 

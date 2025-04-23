@@ -17,7 +17,8 @@ layout = html.Div([
         html.H1("SeqIndexing Dashboard", style={
             "textAlign": "center",
             "fontFamily": FONT_FAMILY,
-            "fontSize": TITLE_FONT_SIZE
+            "fontSize": TITLE_FONT_SIZE,
+            "margin": "3px 0 3px 0"
         }),
 
         # Top Graph Section
@@ -56,7 +57,8 @@ layout = html.Div([
                     'display': 'flex',
                     'flexDirection': 'column',
                     'gap': '8px',
-                    'minHeight': '0'
+                    'minHeight': '0',
+                    'minWidth': '180px'   # ensure sidebar never collapses too small
                 })
             ], style={
                 'flex': '3',
@@ -67,7 +69,8 @@ layout = html.Div([
                 'borderRadius': '8px',
                 'marginRight': '10px',
                 'backgroundColor': BACKGROUND_COLOR,
-                'fontFamily': FONT_FAMILY
+                'fontFamily': FONT_FAMILY,
+                'minWidth': '200px'       # fixed sidebar width
             }),
 
             # Right Panel (7/10)
@@ -190,13 +193,14 @@ layout = html.Div([
                 })
             ], style={
                 'flex': '7',
+                'display': 'flex',
+                'flexDirection': 'column',
                 'padding': '10px',
                 'border': UNSELECTED_BORDER,
                 'borderRadius': '8px',
                 'backgroundColor': BACKGROUND_COLOR,
                 'fontFamily': FONT_FAMILY,
                 'overflow': 'hidden',
-                'maxWidth': '100%',
                 'boxSizing': 'border-box'
             })
         ], style={

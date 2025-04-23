@@ -25,54 +25,54 @@ def register_callbacks(app):
         titles = series["titles"]
         name_to_index = {name: i for i, name in enumerate(titles)}
 
-        # --- CASE 1: match_data is empty or None ---
+        # Decide which names to show
         if not match_data:
-            sorted_names = sorted(titles)[:10]  # top 10 alphabetically
+            sorted_names = sorted(titles)[:10]
         else:
-            # --- CASE 2: match_data available → rank by match count ---
             match_counts = {
-                name: sum(1 for matches in match_data[name].values() for m in matches if m['score'] <= threshold)
+                name: sum(
+                    1 for matches in match_data[name].values()
+                    for m in matches if m['score'] <= threshold
+                )
                 for name in match_data
             }
-
-            # Keep only names with at least 1 match
-            filtered = {name: count for name, count in match_counts.items() if count > 0}
-            sorted_names = sorted(filtered, key=lambda n: -filtered[n])  # sort by count descending
+            filtered = {n: c for n, c in match_counts.items() if c > 0}
+            sorted_names = sorted(filtered, key=lambda n: -filtered[n])
 
         for name in sorted_names:
             if filtered_names and name not in filtered_names:
                 continue
+
             i = name_to_index[name]
             is_selected = str(i) in selected
+            # grey border vs blue border
             border_style = '3px solid #007BFF' if is_selected else '1px solid #ccc'
-            color = color_list[i % len(color_list)]
+            # grey line vs series color
+            preview_color = color_list[i % len(color_list)] if is_selected else '#ccc'
 
+            # only show shading in the mini‐chart if that card is selected
             shapes = []
-
-            if match_data and name in match_data:
+            if is_selected and match_data and name in match_data:
                 min_ws, max_ws = window_size_range
-
                 all_intervals = [
                     match for matches in match_data[name].values()
                     for match in matches
-                    if match["score"] <= threshold and min_ws <= match["window_size"] <= max_ws
+                    if match["score"] <= threshold
+                    and min_ws <= match["window_size"] <= max_ws
                 ]
-                shapes = [
-                    {
-                        'type': 'rect',
-                        'xref': 'x',
-                        'yref': 'paper',
-                        'x0': series["x"][interval['start_idx']],
-                        'x1': min(series["x"][interval['end_idx']], x_max),
-                        'y0': 0,
-                        'y1': 1,
-                        'fillcolor': color,
-                        'opacity': 0.2,
-                        'line': {'width': 0},
-                        'layer': 'below'
-                    }
-                    for interval in all_intervals
-                ]
+                shapes = [{
+                    'type': 'rect',
+                    'xref': 'x',
+                    'yref': 'paper',
+                    'x0': series["x"][match['start_idx']],
+                    'x1': min(series["x"][match['end_idx']], x_max),
+                    'y0': 0,
+                    'y1': 1,
+                    'fillcolor': preview_color,
+                    'opacity': 0.2,
+                    'line': {'width': 0},
+                    'layer': 'below'
+                } for match in all_intervals]
 
             children.append(html.Div([
                 dcc.Graph(
@@ -82,7 +82,7 @@ def register_callbacks(app):
                             'x': series["x"][::10],
                             'y': series["y"][i][::10],
                             'mode': 'lines',
-                            'line': {'width': 1, 'color': color}
+                            'line': {'width': 1, 'color': preview_color}
                         }],
                         'layout': {
                             'height': 40,
@@ -96,13 +96,18 @@ def register_callbacks(app):
                     config={'staticPlot': True, 'displayModeBar': False},
                     style={'cursor': 'pointer', 'height': '40px'}
                 ),
-                html.Div(f"{name}", style={'textAlign': 'center', 'fontSize': '12px'})
-            ], id={'type': 'series-card', 'index': i}, n_clicks=0, style={
-                'border': border_style,
-                'borderRadius': '6px',
-                'padding': '4px',
-                'backgroundColor': '#fff'
-            }))
+                html.Div(name, style={'textAlign': 'center', 'fontSize': '12px'})
+            ],
+                id={'type': 'series-card', 'index': i},
+                n_clicks=0,
+                style={
+                    'border': border_style,
+                    'borderRadius': '6px',
+                    'padding': '4px',
+                    'backgroundColor': '#fff',
+                    # you can add 'width':'100%' here if needed in layout
+                }
+            ))
 
         return children
 
@@ -116,17 +121,15 @@ def register_callbacks(app):
         ctx = callback_context
         if not ctx.triggered or all(n is None for n in n_clicks_list):
             return current_selected
-
         triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
-        index = eval(triggered_id)['index']
-        index_str = str(index)
-
-        selected = set(current_selected)
-        if index_str in selected:
-            selected.remove(index_str)
+        idx = eval(triggered_id)['index']
+        sel = set(current_selected)
+        if str(idx) in sel:
+            sel.remove(str(idx))
         else:
-            selected.add(index_str)
-        return list(selected)
+            sel.add(str(idx))
+        return list(sel)
+
 
     @app.callback(
         Output("example-plot", "figure"),
@@ -137,24 +140,20 @@ def register_callbacks(app):
     )
     def update_main_plot(selected_indices, threshold, window_size_range, match_data):
         if not selected_indices:
-            return {
-                'data': [],
-                'layout': {'title': 'No Series Selected'}
-            }
+            return {'data': [], 'layout': {'title': 'No Series Selected'}}
 
         fig = go.Figure()
         color_list = get_color_palette(series["shape"][0])
         x_max = max(series["x"])
         titles = series["titles"]
-
         min_ws, max_ws = window_size_range
 
-        for idx_num, idx in enumerate(selected_indices):
+        for idx in selected_indices:
             i = int(idx)
             name = titles[i]
             color = color_list[i % len(color_list)]
 
-            # Plot main series line
+            # main line
             fig.add_trace(go.Scatter(
                 x=series["x"],
                 y=series["y"][i],
@@ -163,14 +162,14 @@ def register_callbacks(app):
                 line={'color': color}
             ))
 
-            # Plot matching highlights
+            # highlights
             if match_data and name in match_data:
                 matches_filtered = [
-                    match for matches in match_data[name].values()
-                    for match in matches
-                    if match["score"] <= threshold and min_ws <= match["window_size"] <= max_ws
+                    m for ms in match_data[name].values()
+                    for m in ms
+                    if m["score"] <= threshold
+                       and min_ws <= m["window_size"] <= max_ws
                 ]
-
                 for j, interval in enumerate(matches_filtered, start=1):
                     fig.add_vrect(
                         x0=series["x"][interval["start_idx"]],
@@ -185,13 +184,18 @@ def register_callbacks(app):
 
         fig.update_layout(
             title="Selected Series with Highlighted Matches",
-            margin=dict(t=30),
+            height=500,  # make it taller
+            margin=dict(t=25, l=10, r=10, b=10),
+            legend=dict(
+                x=1.02, y=1,
+                xanchor='left',
+                yanchor='top'
+            ),
             xaxis=dict(
                 rangeslider=dict(visible=True),
                 type='linear'
             )
         )
-
         return fig
 
     @app.callback(

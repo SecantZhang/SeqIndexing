@@ -1,0 +1,4 @@
+/.idea
+/data
+/seqindexing/data/chroma_db
+__pycache__

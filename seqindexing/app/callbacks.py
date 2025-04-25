@@ -16,9 +16,10 @@ def register_callbacks(app):
         Input('match-results-store', 'data'),
         Input('distance-threshold-store', 'data'),
         Input('series-name-filter', 'value'),
-        Input('window-size-slider', 'value')  # ✅ NEW
+        Input('window-size-slider', 'value')
     )
     def update_series_preview_list(selected, match_data, threshold, filtered_names, window_size_range):
+        print(f"update_series_preview_list triggered with selected={selected}, match_data={match_data}, threshold={threshold}, filtered_names={filtered_names}, window_size_range={window_size_range}")
         children = []
         color_list = get_color_palette(series["shape"][0])
         x_max = max(series["x"])
@@ -126,17 +127,23 @@ def register_callbacks(app):
     def toggle_selection(n_clicks_list, current_selected):
         print(f"toggle selection callback triggered, n_clicks_list={n_clicks_list}, current_selected={current_selected}")
         ctx = callback_context
-        if not ctx.triggered or all(n is None for n in n_clicks_list):
-            return current_selected
+
+        # If no clicks have occurred or all n_clicks are 0, return the current selection
+        if not ctx.triggered or all(n == 0 or n is None for n in n_clicks_list):
+            return current_selected or []
+
+        # Identify the triggered card
         triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
         idx = eval(triggered_id)['index']
-        sel = set(current_selected)
+
+        # Toggle the selection
+        sel = set(current_selected or [])
         if str(idx) in sel:
             sel.remove(str(idx))
         else:
             sel.add(str(idx))
-        return list(sel)
 
+        return list(sel)
 
     @app.callback(
         Output("example-plot", "figure"),
@@ -146,6 +153,7 @@ def register_callbacks(app):
         State("match-results-store", "data")
     )
     def update_main_plot(selected_indices, threshold, window_size_range, match_data):
+        print(f"update_main_plot triggered with selected_indices={selected_indices}, threshold={threshold}, window_size_range={window_size_range}")
         if not selected_indices:
             return {'data': [], 'layout': {'title': 'No Series Selected'}}
 
@@ -220,6 +228,7 @@ def register_callbacks(app):
         prevent_initial_call=True
     )
     def submit_sketch(n_clicks, shapes, history, window_size):
+        print(f"submit_sketch triggered with n_clicks={n_clicks}, shapes={shapes}, history={history}, window_size={window_size}")
         if not n_clicks or not shapes:
             raise dash.exceptions.PreventUpdate
 
@@ -301,6 +310,7 @@ def register_callbacks(app):
         State('sketch-shape-store', 'data')
     )
     def update_sketch_store(relayout_data, current_data):
+        print(f"update_sketch_store triggered with relayout_data={relayout_data}, current_data={current_data}")
         if not relayout_data:
             raise dash.exceptions.PreventUpdate
 
@@ -312,6 +322,7 @@ def register_callbacks(app):
         Input("distance-threshold-slider", "value")
     )
     def update_threshold_store(value):
+        print(f"update_threshold_store triggered with value={value}")
         return value
 
     @app.callback(
@@ -367,6 +378,7 @@ def register_callbacks(app):
         Input("sketch-history-store", "data")
     )
     def render_sketch_history(history):
+        print(f"render_sketch_history triggered with history={history}")
         if not history:
             return []
 
@@ -412,6 +424,7 @@ def register_callbacks(app):
         Input("window-size-slider", "value")
     )
     def update_window_size(val):
+        print(f"window size updated with value = {val}")
         print(f"slider updated with value = {val}")
         return val
 
@@ -423,6 +436,7 @@ def register_callbacks(app):
         Input("match-results-store", "data")
     )
     def update_window_size_slider(match_data):
+        print(f"update_window_size_slider triggered with match_data={match_data}")
         default_marks = {7: "7", 15: "15", 30: "30"}
         default_range = [7, 30]
 

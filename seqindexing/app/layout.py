@@ -7,12 +7,21 @@ from .config import (
     PREVIEW_HEIGHT, PREVIEW_CARD_HEIGHT,
     SELECTED_BORDER, UNSELECTED_BORDER, BACKGROUND_COLOR
 )
+from .utils import get_color_palette
 
 import numpy as np
 np.random.seed(0)
 
 
+N_SKETCHES = 20  # or your expected max number of sketches
+color_list = get_color_palette(N_SKETCHES)
+initial_selection = []
+
+
 layout = html.Div([
+    dcc.Store(id="sketch-color-list", data=color_list),
+    dcc.Store(id="sketch-selection-list", data=initial_selection),
+    dcc.Store(id="series-to-sketch-map", data={}),
     html.Div([
         html.H1("SeqIndexing Dashboard", style={
             "textAlign": "center",

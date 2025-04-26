@@ -44,7 +44,8 @@ def get_color_palette(n):
     return [palette[i % len(palette)] for i in range(n)]
 
 
-def interpolate_to_fixed_size(arr, target_size=32):
-    x_old = np.linspace(0, 1, num=len(arr))
-    x_new = np.linspace(0, 1, num=target_size)
+def interpolate_to_fixed_size(arr, target_size):
+    arr = np.asarray(arr, dtype=np.float64)  # Force to float
+    x_old = np.linspace(0, 1, len(arr))
+    x_new = np.linspace(0, 1, target_size)
     return np.interp(x_new, x_old, arr)

@@ -16,12 +16,13 @@ def register_callbacks(app):
         Input('match-results-store', 'data'),
         Input('distance-threshold-store', 'data'),
         Input('series-name-filter', 'value'),
-        Input('window-size-slider', 'value')
+        Input('window-size-slider', 'value'), 
+        State("series-to-sketch-map", "data"),
+        State("sketch-color-list", "data"),
     )
-    def update_series_preview_list(selected, match_data, threshold, filtered_names, window_size_range):
-        print(f"update_series_preview_list triggered with selected={selected}, match_data={match_data}, threshold={threshold}, filtered_names={filtered_names}, window_size_range={window_size_range}")
+    def update_series_preview_list(selected, match_data, threshold, filtered_names, window_size_range, series_to_sketch, color_list):
+        print(f"update_series_preview_list triggered with selected={selected}, threshold={threshold}, filtered_names={filtered_names}, window_size_range={window_size_range}")
         children = []
-        color_list = get_color_palette(series["shape"][0])
         x_max = max(series["x"])
         titles = series["titles"]
         name_to_index = {name: i for i, name in enumerate(titles)}
@@ -40,16 +41,17 @@ def register_callbacks(app):
             filtered = {n: c for n, c in match_counts.items() if c > 0}
             sorted_names = sorted(filtered, key=lambda n: -filtered[n])
 
+        selected = selected or []
+
         for name in sorted_names:
             if filtered_names and name not in filtered_names:
                 continue
 
             i = name_to_index[name]
             is_selected = str(i) in selected
-            # grey border vs blue border
             border_style = '3px solid #007BFF' if is_selected else '1px solid #ccc'
-            # grey line vs series color
-            preview_color = color_list[i % len(color_list)] if is_selected else '#ccc'
+            sketch_idx = series_to_sketch.get(str(i), i)
+            preview_color = color_list[sketch_idx % len(color_list)] if is_selected else '#ccc'
 
             # only show shading in the mini‐chart if that card is selected
             shapes = []
@@ -77,7 +79,7 @@ def register_callbacks(app):
                             'line': {
                                 'width': 1,
                                 'color': color_list[p_idx % len(color_list)],
-                                'dash': ['solid', 'dot', 'dash', 'longdash'][p_idx % 4]  # <-- DASH STYLE
+                                'dash': ['solid', 'dot', 'dash', 'longdash'][p_idx % 4]
                             },
                             'layer': 'below'
                         })
@@ -113,7 +115,6 @@ def register_callbacks(app):
                     'borderRadius': '6px',
                     'padding': '4px',
                     'backgroundColor': '#fff',
-                    # you can add 'width':'100%' here if needed in layout
                 }
             ))
 
@@ -144,21 +145,23 @@ def register_callbacks(app):
             sel.add(str(idx))
 
         return list(sel)
-
+    
     @app.callback(
         Output("example-plot", "figure"),
         Input("selected-series-store", "data"),
+        State("sketch-history-store", "data"),
+        State("sketch-color-list", "data"),
+        State("series-to-sketch-map", "data"),
         Input("distance-threshold-store", "data"),
         Input("window-size-slider", "value"),
         State("match-results-store", "data")
     )
-    def update_main_plot(selected_indices, threshold, window_size_range, match_data):
+    def update_main_plot(selected_indices, history, color_list, series_to_sketch, threshold, window_size_range, match_data):
         print(f"update_main_plot triggered with selected_indices={selected_indices}, threshold={threshold}, window_size_range={window_size_range}")
         if not selected_indices:
             return {'data': [], 'layout': {'title': 'No Series Selected'}}
 
         fig = go.Figure()
-        color_list = get_color_palette(series["shape"][0])
         x_max = max(series["x"])
         titles = series["titles"]
         min_ws, max_ws = window_size_range
@@ -166,7 +169,8 @@ def register_callbacks(app):
         for idx in selected_indices:
             i = int(idx)
             name = titles[i]
-            color = color_list[i % len(color_list)]
+            sketch_idx = series_to_sketch.get(str(i), i)
+            color = color_list[sketch_idx % len(color_list)]
 
             # Draw the main series line
             fig.add_trace(go.Scatter(
@@ -220,7 +224,8 @@ def register_callbacks(app):
         Output("distance-threshold-slider", "value"),
         Output("sketch-history-store", "data"),
         Output("active-sketch-id", "data"),
-        Output("auto-select-series", "data"),  # ✅ new output
+        Output("auto-select-series", "data"), 
+        Output("series-to-sketch-map", "data"),
         Input("submit-sketch", "n_clicks"),
         State("sketch-shape-store", "data"),
         State("sketch-history-store", "data"),
@@ -289,6 +294,13 @@ def register_callbacks(app):
             idx = name_to_index.get(name)
             if idx is not None:
                 matched_indices.add(str(idx))
+                
+        series_to_sketch = {}
+        for idx, name in enumerate(series["titles"]):
+            for sketch_idx, (sketch_id, _) in enumerate(history.items()):
+                # If this series is matched by this sketch, map it
+                if name in reformatted and sketch_id in reformatted[name]:
+                    series_to_sketch[str(name_to_index[name])] = sketch_idx
 
         matched_series = list(matched_indices)
         print(f"current window_size = {window_size}")
@@ -301,7 +313,8 @@ def register_callbacks(app):
             max_dist,
             history,
             sketch_id,
-            matched_series  # send to auto-select
+            matched_series, 
+            series_to_sketch
         )
 
     @app.callback(
@@ -328,9 +341,17 @@ def register_callbacks(app):
     @app.callback(
         Output("sketch-graph-container", "children"),
         Input("sketch-refresh-key", "data"),
+        State("selected-series-store", "data")
     )
-    def render_sketch_graph(refresh_key):
+    def render_sketch_graph(refresh_key, selected_indices):
         print("sketch area rendered with refresh key {}".format(refresh_key))
+        sketch_color = 'red'
+        if selected_indices:
+            try:
+                i = int(selected_indices[0])
+                sketch_color = get_color_palette(series["shape"][0])[i % series["shape"][0]]
+            except Exception as e:
+                print(f"Error getting color for sketch: {e}")
         return html.Div([
             dcc.Graph(
                 id='sketch-graph',
@@ -346,7 +367,7 @@ def register_callbacks(app):
                     'layout': {
                         'dragmode': 'drawopenpath',
                         'newshape': {
-                            'line': {'color': 'red'},
+                            'line': {'color': sketch_color},
                             'fillcolor': 'rgba(0,0,0,0)',
                             'opacity': 0.5
                         },
@@ -361,7 +382,7 @@ def register_callbacks(app):
                     'border': '1px solid #ccc'
                 }
             )
-        ], key=str(refresh_key))
+        ], key=f"{refresh_key}-{sketch_color}")
 
     @app.callback(
         Output("sketch-refresh-key", "data"),
@@ -375,21 +396,22 @@ def register_callbacks(app):
 
     @app.callback(
         Output("sketch-history-list", "children"),
-        Input("sketch-history-store", "data")
+        Input("sketch-history-store", "data"),
+        State("sketch-color-list", "data")
     )
-    def render_sketch_history(history):
-        print(f"render_sketch_history triggered with history={history}")
+    def render_sketch_history(history, color_list):
         if not history:
             return []
-
         preview_components = []
-        for sketch_id, y_values in history.items():
+        for idx, (sketch_id, sketch_data) in enumerate(history.items()):
+            color = color_list[idx % len(color_list)]
+            shapes = sketch_data["shapes"] if isinstance(sketch_data, dict) else sketch_data
             preview_fig = {
                 'data': [{
-                    'x': list(range(len(y_values))),
-                    'y': y_values,
+                    'x': list(range(len(shapes))),
+                    'y': shapes,
                     'mode': 'lines',
-                    'line': {'width': 1, 'color': '#444'}
+                    'line': {'width': 2, 'color': color}
                 }],
                 'layout': {
                     'height': 40,
@@ -397,26 +419,12 @@ def register_callbacks(app):
                     'xaxis': {'visible': False},
                     'yaxis': {'visible': False},
                     'showlegend': False,
-                    'dragmode': False,
-                    'hovermode': False
                 }
             }
-
             preview_components.append(html.Div([
-                dcc.Graph(
-                    figure=preview_fig,
-                    config={'staticPlot': True, 'displayModeBar': False},
-                    style={'height': '40px', 'width': '80px'}
-                )
-            ], id={'type': 'history-card', 'index': sketch_id},
-                n_clicks=0,
-                style={
-                    'border': '1px solid #ccc',
-                    'borderRadius': '4px',
-                    'padding': '2px',
-                    'cursor': 'pointer'
-                }))
-
+                dcc.Graph(figure=preview_fig, config={'staticPlot': True, 'displayModeBar': False},
+                          style={'height': '40px', 'width': '80px'})
+            ]))
         return preview_components
 
     @app.callback(

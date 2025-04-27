@@ -23,6 +23,7 @@ layout = html.Div([
     dcc.Store(id="sketch-selection-list", data=initial_selection),
     dcc.Store(id="series-to-sketch-map", data={}),
     dcc.Store(id="active-patterns", data={}),
+    dcc.Store(id="active-patterns-with-selection", data={}),
     html.Div([
         html.H1("SeqIndexing Dashboard", style={
             "textAlign": "center",

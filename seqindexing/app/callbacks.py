@@ -7,6 +7,7 @@ import dash
 import plotly.graph_objs as go
 import numpy as np
 import uuid
+import copy
 
 
 def register_callbacks(app):
@@ -122,22 +123,30 @@ def register_callbacks(app):
 
     @app.callback(
         Output('selected-series-store', 'data'),
+        Output("active-patterns-with-selection", "data"),
         Input({'type': 'series-card', 'index': ALL}, 'n_clicks'),
         State('selected-series-store', 'data'),
         State('series-to-sketch-map', 'data'),
+        State("active-patterns", "data"),
+        Input("active-patterns-with-selection", "data"), 
+        State('active-sketch-id', 'data'),
     )
-    def toggle_selection(n_clicks_list, current_selected, series_to_sketch):
+    def toggle_selection(n_clicks_list, current_selected, series_to_sketch, active_patterns, active_patterns_with_selection, active_sketch_id):
+        print(f"toggle_selection triggered")
         ctx = callback_context
         if not ctx.triggered or all(n == 0 or n is None for n in n_clicks_list):
-            return current_selected or []
+            return current_selected or [], dash.no_update
 
         triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
         idx = str(eval(triggered_id)['index'])
+        
+        print(triggered_id)
+        print(idx)
 
         # Find the pattern/sketch this series belongs to
         pattern_idx = str(series_to_sketch.get(idx))
         if pattern_idx is None:
-            return current_selected or []
+            return current_selected or [], dash.no_update
 
         # Remove any other selected series from the same pattern
         new_selected = []
@@ -148,18 +157,34 @@ def register_callbacks(app):
         # Toggle: add if not present, remove if present
         if idx not in new_selected:
             new_selected.append(idx)
+        print(active_sketch_id)
+        print(len(active_patterns))
 
-        return new_selected
+        if active_patterns_with_selection == {}:
+            active_patterns_with_selection = copy.deepcopy(active_patterns)
+        else:
+            for pattern_uuid, pattern in active_patterns.items():
+                if pattern_uuid not in active_patterns_with_selection:
+                    active_patterns_with_selection[pattern_uuid] = active_patterns[pattern_uuid]
+
+        # Now you can safely assign
+        active_patterns_with_selection[str(active_sketch_id)]["selected_series"] = idx
+        active_patterns_with_selection[str(active_sketch_id)]["selected_series_name"] = series["titles"][int(idx)]
+        
+
+        print(len(active_patterns_with_selection))
+
+        return new_selected, active_patterns_with_selection
     
     @app.callback(
         Output("example-plot", "figure"),
-        Input("active-patterns", "data"),
-        Input('selected-series-store', 'data'),  # <-- change to Input
+        Input("active-patterns-with-selection", "data"),
+        Input('selected-series-store', 'data'),
         State("distance-threshold-store", "data"),
         State("window-size-slider", "value"),
     )
     def update_main_plot(active_patterns, selected, threshold, window_size_range):
-        print(f"update_main_plot triggered with active_patterns={active_patterns}")
+        print(f"update_main_plot triggered")
         fig = go.Figure()
         if not active_patterns:
             return fig
@@ -172,31 +197,28 @@ def register_callbacks(app):
         for pattern_id, pattern_info in active_patterns.items():
             color = pattern_info["color"]
             matched_patterns = pattern_info["matched_patterns"]
-            for name, matches in matched_patterns.items():
-                i = series["titles"].index(name)
-                if str(i) not in selected:
-                    continue  # Only plot if selected
-                # Draw the main series line
-                fig.add_trace(go.Scatter(
-                    x=series["x"],
-                    y=series["y"][i],
-                    mode='lines',
-                    name=f"{name} ({pattern_info['name']})",
-                    line={'color': color}
-                ))
-                # Draw matched pattern areas
-                for match in matches:
-                    if match["score"] is not None and match["score"] <= threshold and min_ws <= match["window_size"] <= max_ws:
-                        fig.add_vrect(
-                            x0=series["x"][match["start_idx"]],
-                            x1=min(series["x"][match["end_idx"]], x_max),
-                            fillcolor=color,
-                            opacity=0.25,
-                            layer='below',
-                            line_width=1,
-                            annotation_text=f"Match",
-                            annotation_position='top left'
-                        )
+            i = int(pattern_info["selected_series"])
+            # Draw the main series line
+            fig.add_trace(go.Scatter(
+                x=series["x"],
+                y=series["y"][i],
+                mode='lines',
+                name=f"{pattern_info['selected_series_name']}",
+                line={'color': color}
+            ))
+
+            for match in matched_patterns[pattern_info["selected_series_name"]]:
+                if match["score"] is not None and match["score"] <= threshold and min_ws <= match["window_size"] <= max_ws:
+                    fig.add_vrect(
+                        x0=series["x"][match["start_idx"]],
+                        x1=min(series["x"][match["end_idx"]], x_max),
+                        fillcolor=color,
+                        opacity=0.25,
+                        layer='below',
+                        line_width=1,
+                        annotation_text=f"Match",
+                        annotation_position='top left'
+                    )
 
         fig.update_layout(
             title="Active Patterns and Their Matches",
@@ -229,16 +251,17 @@ def register_callbacks(app):
         State("sketch-shape-store", "data"),
         State("sketch-history-store", "data"),
         State("window-size-store", "data"),
-        State("sketch-color-list", "data"),  # <-- Add this state
+        State("sketch-color-list", "data"),
+        State("active-patterns", "data"),  # <-- Add this line
         prevent_initial_call=True
     )
-    def submit_sketch(n_clicks, shapes, history, window_size, color_list):
+    def submit_sketch(n_clicks, shapes, history, window_size, color_list, prev_active_patterns):
         print(f"submit_sketch triggered with n_clicks={n_clicks}, shapes={shapes}, history={history}, window_size={window_size}")
         if not n_clicks or not shapes:
             raise dash.exceptions.PreventUpdate
 
         sketch_id = str(uuid.uuid4())
-        history = history or {}
+        history = history or {} 
         history[sketch_id] = shapes
         print(history)
         name_to_index = {name: i for i, name in enumerate(series["titles"])}
@@ -266,10 +289,9 @@ def register_callbacks(app):
                 reformatted[name][curr_uuid].append(entry)
 
         # Build active_patterns
-        active_patterns = dash.no_update
         if color_list is not None:
-            active_patterns = {}
-            color = color_list[len(history)-1 % len(color_list)]
+            active_patterns = copy.deepcopy(prev_active_patterns) if prev_active_patterns else {}
+            color = color_list[(len(history)-1) % len(color_list)]
             matched_patterns = {}
             for name, uuid_dict in reformatted.items():
                 for pattern_uuid, matches in uuid_dict.items():
@@ -280,7 +302,8 @@ def register_callbacks(app):
                 "matched_patterns": matched_patterns,
                 "shapes": shapes,
                 "window_size": window_size,
-                # add more as needed
+                "selected_series": None, 
+                "selected_series_name": None
             }
 
         matched_indices = set()
@@ -410,22 +433,23 @@ def register_callbacks(app):
         Input("sketch-color-list", "data"),
         Input("selected-series-store", "data"),
         Input("series-to-sketch-map", "data"),
+        State("active-patterns", "data"),
+        State("active-patterns-with-selection", "data")
     )
-    def render_sketch_history(history, color_list, selected, series_to_sketch):
+    def render_sketch_history(history, color_list, selected, series_to_sketch, active_patterns, active_pattern_with_sel):
         if not history:
             return []
-        selected = selected or []
         preview_components = []
-        for idx, (sketch_id, sketch_data) in enumerate(history.items()):
+        for idx, (pattern_uuid, patterns) in enumerate(active_patterns.items()):
             color = color_list[idx % len(color_list)]
-            shapes = sketch_data["shapes"] if isinstance(sketch_data, dict) else sketch_data
-            # Find the selected series for this sketch
-            selected_series_name = ""
-            for sel_idx in selected:
-                if str(series_to_sketch.get(sel_idx)) == str(idx):
-                    # Get the series name
-                    selected_series_name = series["titles"][int(sel_idx)]
-                    break
+            shapes = patterns["shapes"]
+
+            # Use selected_series_name from active_patterns if available
+            if pattern_uuid in active_pattern_with_sel:
+                selected_series_name = active_pattern_with_sel[pattern_uuid]["selected_series_name"]
+            else:
+                selected_series_name = ""
+            
             preview_fig = {
                 'data': [{
                     'x': list(range(len(shapes))),

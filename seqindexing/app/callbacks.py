@@ -222,16 +222,45 @@ def register_callbacks(app):
 
         fig.update_layout(
             title="Active Patterns and Their Matches",
+            title_font=dict(family="Roboto, Arial, sans-serif", size=22, color="#212121"),
             height=500,
-            margin=dict(t=25, l=10, r=10, b=10),
+            margin=dict(t=32, l=24, r=24, b=24),
             legend=dict(
                 x=1.02, y=1,
                 xanchor='left',
-                yanchor='top'
+                yanchor='top',
+                bgcolor='rgba(255,255,255,0.95)',
+                bordercolor='#e0e0e0',
+                borderwidth=1,
+                font=dict(family="Roboto, Arial, sans-serif", size=13, color="#424242")
             ),
             xaxis=dict(
-                rangeslider=dict(visible=True),
-                type='linear'
+                rangeslider=dict(visible=True, thickness=0.07, bgcolor="#f5f5f5"),
+                type='linear',
+                showgrid=True,
+                gridcolor='#eeeeee',
+                zeroline=False,
+                linecolor='#bdbdbd',
+                linewidth=1,
+                tickfont=dict(family="Roboto, Arial, sans-serif", size=13, color="#616161"),
+                title_font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor='#eeeeee',
+                zeroline=False,
+                linecolor='#bdbdbd',
+                linewidth=1,
+                tickfont=dict(family="Roboto, Arial, sans-serif", size=13, color="#616161"),
+                title_font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
+            ),
+            plot_bgcolor='#fff',
+            paper_bgcolor='#fff',
+            font=dict(family="Roboto, Arial, sans-serif", color="#212121"),
+            hoverlabel=dict(
+                bgcolor="#fafafa",
+                font_size=13,
+                font_family="Roboto, Arial, sans-serif"
             )
         )
         return fig

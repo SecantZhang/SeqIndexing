@@ -94,17 +94,40 @@ layout = html.Div([
                     'fontSize': LABEL_FONT_SIZE,
                     'marginBottom': '10px'
                 }),
-                dcc.Dropdown(
-                    id='series-name-filter',
-                    options=[{'label': name, 'value': name} for name in series["titles"]],
-                    value=[],  # all selected by default
-                    multi=True,
-                    placeholder="Select stock names to display...",
-                    style={
-                        'fontSize': '12px',
-                        'maxHeight': '60px'
-                    }
-                ),
+                html.Div([
+                    dcc.Dropdown(
+                        id='series-name-filter',
+                        options=[{'label': name, 'value': name} for name in series["titles"]],
+                        value=[],  # all selected by default
+                        multi=True,
+                        placeholder="Select stock names to display...",
+                        style={
+                            'fontSize': '12px',
+                            'maxHeight': '60px', 
+                            'flex': 7, 
+                        }
+                    ),
+                    dcc.Dropdown(
+                        id='distance-measure-dropdown',
+                        options=[
+                            {'label': 'Euclidean', 'value': 'euclidean'},
+                            {'label': 'DTW', 'value': 'dtw'},
+                            {'label': 'Qetch', 'value': 'qetch'}
+                        ],
+                        value='euclidean',
+                        clearable=False,
+                        style={
+                            'fontSize': '12px',
+                            'minWidth': '120px', 
+                            'flex': 3,
+                        }
+                    ),
+                ], style={
+                    'display': 'flex',
+                    'gap': '10px',
+                    'alignItems': 'center',
+                    'marginBottom': '8px'
+                }),
                 html.Div([
                     html.H4("History", style={'fontSize': LABEL_FONT_SIZE, 'marginBottom': '4px'}),
                     html.Div(id="sketch-history-list", style={
@@ -139,11 +162,11 @@ layout = html.Div([
                         html.Div(
                             dcc.RangeSlider(
                                 id="window-size-slider",
-                                step=None,
-                                marks={7: '7', 30: '30'},  # dynamically set
+                                step=1,
+                                marks=None,  # dynamically set
                                 value=[7, 30],
                                 allowCross=False,
-                                tooltip={"placement": "top", "always_visible": True},
+                                tooltip={"placement": "top", "always_visible": False},
                                 className="custom-slider"
                             ),
                             style={

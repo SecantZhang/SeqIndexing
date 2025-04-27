@@ -237,7 +237,7 @@ def register_callbacks(app):
         return fig
 
     @app.callback(
-        Output("submit-sketch", "children"),
+        # Output("submit-sketch", "children"),
         Output("match-results-store", "data"),
         Output("distance-histogram", "figure"),
         Output("distance-threshold-slider", "max"),
@@ -340,7 +340,7 @@ def register_callbacks(app):
         )
 
         return (
-            f"Submitted ({len(shapes)} shape{'s' if len(shapes) != 1 else ''})",
+            # f"Submitted ({len(shapes)} shape{'s' if len(shapes) != 1 else ''})",
             reformatted,
             hist_fig,
             max_dist,

@@ -63,6 +63,47 @@ def query_chroma_topk(histories: dict[str, list[float]], k: int = 100):
     return all_results
 
 
+def query_chroma_topk_for_each_name(histories: dict[str, list[float]], k: int = 10, filtered_titles=None):
+    """
+    For each sketch_id in histories, query top-k for each name in the collection,
+    and flatten all hits into a single list for that sketch_id.
+    Returns: {sketch_id: [hit, hit, ...]} (same structure as query_chroma_topk)
+    """
+    client = PersistentClient(path="./seqindexing/data/chroma_db")
+    collection = client.get_collection("sp500_series")
+    if filtered_titles is None: 
+        filtered_titles = series["titles"]
+    all_results = {}
+
+    for sketch_id, vector in histories.items():
+        hits = []
+        for idx, name in enumerate(filtered_titles):
+            # print(f"Querying {name} for sketch_id {sketch_id}...")
+            query_vector = series["y"][idx]
+            interpolated = interpolate_to_fixed_size(np.array(query_vector), target_size=32)
+            results = collection.query(
+                query_embeddings=[interpolated.tolist()],
+                n_results=k,
+                where={"name": str(name)}
+            )
+            
+            # print(results)
+            for doc, score, meta in zip(results["documents"][0], results["distances"][0], results["metadatas"][0]):
+                hits.append({
+                    "score": score,
+                    "title": doc,
+                    "name": meta["name"],
+                    "start_date": meta["start_date"],
+                    "end_date": meta["end_date"],
+                    "start_idx": meta["start_idx"],
+                    "end_idx": meta["end_idx"],
+                    "window_size": meta["window_size"]
+                })
+        all_results[sketch_id] = hits
+
+    return all_results
+
+
 def generate_dummy_matches(series, sub_len=64, n_subs=3, pattern=None):
     n_rows, total_len = series.shape
     result = []

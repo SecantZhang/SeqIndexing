@@ -1,6 +1,6 @@
 from dash import Input, Output, State, callback_context, ALL
 from dash import html, dcc
-from .data import series, query_chroma_topk, generate_dummy_matches
+from .data import series, query_chroma_topk_for_each_name, generate_dummy_matches
 from .config import SERIES_WINDOW_SIZE
 from .utils import parse_and_interpolate_path, get_color_palette
 import dash
@@ -277,6 +277,7 @@ def register_callbacks(app):
         Output("series-to-sketch-map", "data"),
         Output("active-patterns", "data"),  # <-- Add this output
         Input("submit-sketch", "n_clicks"),
+        Input('series-name-filter', 'value'),
         State("sketch-shape-store", "data"),
         State("sketch-history-store", "data"),
         State("window-size-store", "data"),
@@ -284,8 +285,8 @@ def register_callbacks(app):
         State("active-patterns", "data"),  # <-- Add this line
         prevent_initial_call=True
     )
-    def submit_sketch(n_clicks, shapes, history, window_size, color_list, prev_active_patterns):
-        print(f"submit_sketch triggered with n_clicks={n_clicks}, shapes={shapes}, history={history}, window_size={window_size}")
+    def submit_sketch(n_clicks, series_name_filter, shapes, history, window_size, color_list, prev_active_patterns):
+        print(f"submit_sketch triggered with n_clicks={n_clicks}, shapes={shapes}, history={history}, window_size={window_size}, series_name_filter={series_name_filter}")
         if not n_clicks or not shapes:
             raise dash.exceptions.PreventUpdate
 
@@ -296,7 +297,8 @@ def register_callbacks(app):
         name_to_index = {name: i for i, name in enumerate(series["titles"])}
 
         sketch = np.array(shapes)
-        topk_matches = query_chroma_topk(history)
+        print(series_name_filter)
+        topk_matches = query_chroma_topk_for_each_name(history, k=10, filtered_titles=series_name_filter)
 
         all_scores = [match["score"] for matches in topk_matches.values() for match in matches]
         max_dist = max(all_scores) if all_scores else 1.0
@@ -543,3 +545,12 @@ def register_callbacks(app):
         default_val = [min_val, max_val]
 
         return min_val, max_val, marks, [min_val, max_val]
+    
+    @app.callback(
+        Output('series-name-filter', 'value'),
+        Input('series-name-filter', 'value'),
+        prevent_initial_call=True
+    )
+    def update_series_name_filter(new_value):
+        print(f"update_series_name_filter triggered with new_value={new_value}")
+        return new_value

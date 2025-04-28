@@ -64,11 +64,11 @@ body {
 }
 .material-dropdown, .material-slider {
     border-radius: 4px;
-    border: 1px solid #e0e0e0;
+    border: 0px solid #e0e0e0;
     font-family: 'Roboto', Arial, sans-serif;
     font-size: 0.97rem;
     padding: 4px 8px;
-    background: #fafafa;
+    background: #ffffff;
     margin-right: 10px;
 }
 .material-history {
@@ -119,8 +119,9 @@ body {
 .series-card {
     width: 100%;
     box-sizing: border-box;
-    margin: 0;
+    margin: 5px;
     border-radius: 8px;
+    margin-bottom: 4px;
     /* other styles as needed */
 }
 .material-sidebar.material-card {

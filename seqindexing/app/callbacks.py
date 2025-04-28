@@ -50,7 +50,7 @@ def register_callbacks(app):
 
             i = name_to_index[name]
             is_selected = str(i) in selected
-            border_style = '3px solid #007BFF' if is_selected else '1px solid #ccc'
+            border_style = '3px solid #007BFF' if is_selected else '0px solid #ccc'
             sketch_idx = series_to_sketch.get(str(i), i)
             preview_color = color_list[sketch_idx % len(color_list)] if is_selected else '#ccc'
 
@@ -186,7 +186,54 @@ def register_callbacks(app):
     def update_main_plot(active_patterns, selected, threshold, window_size_range):
         print(f"update_main_plot triggered")
         fig = go.Figure()
+        xaxis_style = dict(
+            rangeslider=dict(visible=True, thickness=0.07, bgcolor="#f5f5f5"),
+            type='linear',
+            showgrid=True,
+            gridcolor='#eeeeee',
+            zeroline=False,
+            linecolor='#bdbdbd',
+            linewidth=1,
+            tickfont=dict(family="Roboto, Arial, sans-serif", size=13, color="#616161"),
+            title_font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
+        )
+        yaxis_style = dict(
+            showgrid=True,
+            gridcolor='#eeeeee',
+            zeroline=False,
+            linecolor='#bdbdbd',
+            linewidth=1,
+            tickfont=dict(family="Roboto, Arial, sans-serif", size=13, color="#616161"),
+            title_font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
+        )
+        layout_style = dict(
+            # title="Active Patterns and Their Matches",
+            title_font=dict(family="Roboto, Arial, sans-serif", size=22, color="#212121"),
+            # height=500,
+            margin=dict(t=32, l=24, r=24, b=24),
+            legend=dict(
+                x=1.02, y=1,
+                xanchor='left',
+                yanchor='top',
+                bgcolor='rgba(255,255,255,0.95)',
+                bordercolor='#e0e0e0',
+                borderwidth=1,
+                font=dict(family="Roboto, Arial, sans-serif", size=13, color="#424242")
+            ),
+            xaxis=xaxis_style,
+            yaxis=yaxis_style,
+            plot_bgcolor='#fff',
+            paper_bgcolor='#fff',
+            font=dict(family="Roboto, Arial, sans-serif", color="#212121"),
+            hoverlabel=dict(
+                bgcolor="#fafafa",
+                font_size=13,
+                font_family="Roboto, Arial, sans-serif"
+            )
+        )
+
         if not active_patterns:
+            fig.update_layout(**layout_style)
             return fig
 
         x_max = max(series["x"])
@@ -220,49 +267,7 @@ def register_callbacks(app):
                         annotation_position='top left'
                     )
 
-        fig.update_layout(
-            title="Active Patterns and Their Matches",
-            title_font=dict(family="Roboto, Arial, sans-serif", size=22, color="#212121"),
-            height=500,
-            margin=dict(t=32, l=24, r=24, b=24),
-            legend=dict(
-                x=1.02, y=1,
-                xanchor='left',
-                yanchor='top',
-                bgcolor='rgba(255,255,255,0.95)',
-                bordercolor='#e0e0e0',
-                borderwidth=1,
-                font=dict(family="Roboto, Arial, sans-serif", size=13, color="#424242")
-            ),
-            xaxis=dict(
-                rangeslider=dict(visible=True, thickness=0.07, bgcolor="#f5f5f5"),
-                type='linear',
-                showgrid=True,
-                gridcolor='#eeeeee',
-                zeroline=False,
-                linecolor='#bdbdbd',
-                linewidth=1,
-                tickfont=dict(family="Roboto, Arial, sans-serif", size=13, color="#616161"),
-                title_font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
-            ),
-            yaxis=dict(
-                showgrid=True,
-                gridcolor='#eeeeee',
-                zeroline=False,
-                linecolor='#bdbdbd',
-                linewidth=1,
-                tickfont=dict(family="Roboto, Arial, sans-serif", size=13, color="#616161"),
-                title_font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
-            ),
-            plot_bgcolor='#fff',
-            paper_bgcolor='#fff',
-            font=dict(family="Roboto, Arial, sans-serif", color="#212121"),
-            hoverlabel=dict(
-                bgcolor="#fafafa",
-                font_size=13,
-                font_family="Roboto, Arial, sans-serif"
-            )
-        )
+        fig.update_layout(**layout_style)
         return fig
 
     @app.callback(
@@ -442,11 +447,13 @@ def register_callbacks(app):
                     }
                 },
                 style={
-                    'height': '400px',
-                    'border': '1px solid #ccc'
+                    'height': '100%',
+                    'width': '100%',
+                    # 'border': '1px solid #ccc',
+                    'minHeight': 0
                 }
             )
-        ], key=f"{refresh_key}-{sketch_color}")
+        ], key=f"{refresh_key}-{sketch_color}", style={'height': '100%', 'minHeight': 0, 'display': 'flex', 'flexDirection': 'column'})
 
     @app.callback(
         Output("sketch-refresh-key", "data"),

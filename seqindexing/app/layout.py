@@ -1,404 +1,325 @@
+# layout.py – main plot 75 %  |  history 25 % (horizontal previews);
+#             right column with restored gaps.
 from dash import dcc, html
-from .data   import series
-from .utils  import get_color_palette
+from .data import series
+from .utils import get_color_palette
 import numpy as np
+
 np.random.seed(0)
 
-# card height ratios (left & right columns share them)
-BIG_RATIO   = 1   # main plot / sketch canvas
-SMALL_RATIO = 1   # select-series / history               (sum = 1.0)
+# ── add these two constants near the top of layout.py ─────────────
+APP_W = "2000px"      # overall width  (change to taste)
+APP_H = "1200px"       # overall height (change to taste)
+# ── column shares ─────────────────────────────────────────────────
+LEFT_PLOT_RATIO, LEFT_HISTORY_RATIO = 0.85, 0.15        # left column
+RIGHT_CTRL_RATIO, RIGHT_SELECT_RATIO, RIGHT_SKETCH_RATIO = 0.12, 0.25, 0.63
+# thumbnails are resized by assets/history_previews.css
+# ──────────────────────────────────────────────────────────────────
 
-N_SKETCHES        = 20
-color_list        = get_color_palette(N_SKETCHES)
+N_SKETCHES = 20
+color_list = get_color_palette(N_SKETCHES)
 initial_selection = []
 
-# Top bar with title
+# ── top bar ───────────────────────────────────────────────────────
 top_bar = html.Div(
+    "SeqIndexing Dashboard",
     style={
-        "width": "100%",
-        "background": "#fff",
-        "padding": "0 0 0 0",
-        "height": "56px",
+        "height": "48px",
         "display": "flex",
         "alignItems": "center",
-        "boxShadow": "0 2px 8px rgba(0,0,0,0.04)",
-        "marginBottom": "18px",
-        "borderRadius": "10px"
+        "padding": "0 32px",
+        "fontWeight": "bold",
+        "fontSize": "1.6rem",
+        "background": "#fff",
+        "borderRadius": "8px",
+        "boxShadow": "0 2px 6px rgba(0,0,0,0.05)",
     },
-    children=[
-        html.Div(
-            "SeqIndexing Dashboard",
-            style={
-                "fontWeight": "bold",
-                "fontSize": "1.5rem",
-                "color": "#222",
-                "marginLeft": "32px",
-                "fontFamily": "Roboto, Arial, sans-serif"
-            }
-        )
-    ]
 )
 
+# ── layout ────────────────────────────────────────────────────────
 layout = html.Div(
-    className="material-container",
     style={
-        "height":     "1200px",  # Reduced overall height
-        "width":      "99vw",
-        "maxWidth":   "99vw",
-        "margin":     "0",
-        "overflow":   "hidden",
-        "display":    "flex",
+        "width": APP_W,
+        "height": APP_H,
+        "margin": "32px auto",  # centred in viewport
+        "display": "flex",
         "flexDirection": "column",
-        "rowGap":     "0",
-        "padding":    "40px 64px",
-        "background": "#f7f8fa",
-        "boxSizing":  "border-box"
+        "rowGap": "16px",
+        "background": "#f2f4f7",
+        "borderRadius": "14px",
+        "boxShadow": "0 4px 16px rgba(0,0,0,0.1)",
+        "overflow": "hidden",  # prevent outer scrollbars
     },
     children=[
         top_bar,
-
-        # workspace (fills remaining height)
+        # ── workspace grid ─────────────────────────────────────────
         html.Div(
             style={
                 "flex": "1 1 0%",
-                "display": "flex",
-                "flexDirection": "row",
-                "alignItems": "stretch",
+                "display": "grid",
+                "gridTemplateColumns": "minmax(0,5fr) minmax(0,3fr)",
                 "gap": "24px",
                 "minHeight": 0,
-                "height": "100%",
-                "width": "100%",           # Make workspace fill available width
-                "maxWidth": "100%",        # Remove width limit
-                "margin": "0",             # Remove auto-centering
-                "boxSizing": "border-box"
             },
             children=[
-                # ═════════ MAIN PLOT (LEFT PANEL, 5/10) ═════════
+                # ═════════ LEFT COLUMN ═════════
                 html.Div(
                     style={
-                        "flex": "5 5 0%",
-                        "minWidth": 0,
-                        "background": "#fff",
-                        "borderRadius": "14px",
-                        "boxShadow": "0 2px 12px rgba(0,0,0,0.06)",
-                        "padding": "28px 24px",
                         "display": "flex",
                         "flexDirection": "column",
-                        "justifyContent": "center",
                         "height": "100%",
-                        "boxSizing": "border-box"
+                        "minWidth": 0,
+                        "minHeight": 0,
                     },
                     children=[
-                        html.Div("Interactive Series Presenter", className="material-section-title", style={
-                            "fontWeight": "bold",
-                            "fontSize": "1.1rem",
-                            "marginBottom": "12px",
-                            "color": "#333"
-                        }),
+                        # ① main plot
                         html.Div(
-                            style={"flex": f"1 1 0%", "minWidth": 0, "minHeight": 0},
+                            style={
+                                "flex": f"{LEFT_PLOT_RATIO} 1 0%",
+                                "background": "#fff",
+                                "borderRadius": "12px",
+                                "padding": "20px",
+                                "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
+                                "minWidth": 0,
+                                "minHeight": 0,
+                            },
                             children=[
                                 dcc.Graph(
                                     id="example-plot",
-                                    figure=dict(
-                                        data=[dict(
-                                            x=series["x"],
-                                            y=series["y"][0],
-                                            type="line",
-                                            name=series["titles"][0],
-                                            line={'color': "#2196f3"}
-                                        )],
-                                        layout=dict(
-                                            title="Active Patterns and Their Matches",
-                                            title_font=dict(family="Roboto, Arial, sans-serif", size=22, color="#212121"),
-                                            # Remove fixed height to allow responsiveness
-                                            margin=dict(t=32, l=24, r=24, b=24),
-                                            legend=dict(
-                                                x=1.02, y=1,
-                                                xanchor='left',
-                                                yanchor='top',
-                                                bgcolor='rgba(255,255,255,0.95)',
-                                                bordercolor='#e0e0e0',
-                                                borderwidth=1,
-                                                font=dict(family="Roboto, Arial, sans-serif", size=13, color="#424242")
-                                            ),
-                                            xaxis=dict(
-                                                rangeslider=dict(visible=True, thickness=0.07, bgcolor="#f5f5f5"),
-                                                type='linear',
-                                                showgrid=True,
-                                                gridcolor='#eeeeee',
-                                                zeroline=False,
-                                                linecolor='#bdbdbd',
-                                                linewidth=1,
-                                                tickfont=dict(family="Roboto, Arial, sans-serif", size=13, color="#616161"),
-                                                title_font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
-                                            ),
-                                            yaxis=dict(
-                                                showgrid=True,
-                                                gridcolor='#eeeeee',
-                                                zeroline=False,
-                                                linecolor='#bdbdbd',
-                                                linewidth=1,
-                                                tickfont=dict(family="Roboto, Arial, sans-serif", size=13, color="#616161"),
-                                                title_font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
-                                            ),
-                                            plot_bgcolor='#fff',
-                                            paper_bgcolor='#fff',
-                                            font=dict(family="Roboto, Arial, sans-serif", color="#212121"),
-                                            hoverlabel=dict(
-                                                bgcolor="#fafafa",
-                                                font_size=13,
-                                                font_family="Roboto, Arial, sans-serif"
-                                            )
-                                        )
-                                    ),
-                                    config={"responsive": True},  # Enable responsiveness
-                                    style={
-                                        "height": "100%",
-                                        "width": "100%",
-                                        "minWidth": 0
-                                    }
+                                    figure={
+                                        "data": [
+                                            {
+                                                "x": series["x"],
+                                                "y": series["y"][0],
+                                                "type": "line",
+                                                "name": series["titles"][0],
+                                                "line": {"color": "#2196f3"},
+                                            }
+                                        ],
+                                        "layout": {
+                                            "margin": {"t": 20, "l": 30, "r": 10, "b": 32},
+                                            "plot_bgcolor": "#fff",
+                                            "paper_bgcolor": "#fff",
+                                            "xaxis": {"showgrid": True, "gridcolor": "#e0e0e0"},
+                                            "yaxis": {"showgrid": True, "gridcolor": "#e0e0e0"},
+                                        },
+                                    },
+                                    config={"responsive": True},
+                                    style={"height": "100%", "width": "100%", "minWidth": 0},
                                 )
-                            ]
-                        )
-                    ]
-                ),
-
-                # ═════════ SELECT SERIES PANEL (MIDDLE PANEL, 2/10) ═════════
-                html.Div(
-                    className="material-card",
-                    style={
-                        "flex": "2 2 0%",
-                        "minWidth": 0,
-                        "background": "#f9fafb",
-                        "borderRadius": "14px",
-                        "padding": "24px 18px",
-                        "display": "flex",
-                        "flexDirection": "column",
-                        "height": "100%",
-                        "overflow": "hidden",
-                        "boxSizing": "border-box"
-                    },
-                    children=[
-                        dcc.Store(id="auto-select-series", data=[]),
-                        dcc.Store(id="selected-series-store", data=[]),
-                        dcc.Store(id="match-results-store", data={}),
-                        html.Div("Select Series", className="material-section-title", style={
-                            "fontWeight": "bold",
-                            "fontSize": "1.1rem",
-                            "marginBottom": "12px",
-                            "color": "#333"
-                        }),
+                            ],
+                        ),
+                        # ② history panel
                         html.Div(
-                            id="series-selector-container",
                             style={
-                                "overflowY": "auto",
-                                "flex": "1 1 0%",
-                                "rowGap": "4px",
-                                "paddingRight": "4px",
-                                "minHeight": 0
-                            }
-                        )
-                    ]
-                ),
-
-                # ═════════ SKETCH AREA (RIGHT PANEL, 3/10) ═════════
-                html.Div(
-                    style={
-                        "flex": "3 3 0%",
-                        "minWidth": 0,
-                        "display": "flex",
-                        "flexDirection": "column",
-                        "height": "100%",              # Ensure same height as other columns
-                        "alignSelf": "stretch",        # Stretch to match parent height
-                        "boxSizing": "border-box", 
-                        "marginBottom": "0",
-                    },
-                    children=[
-                        html.Div(
-                            className="material-card",
-                            style={
-                                "flex": "1 1 0%",      # Take all available height in the column
+                                "flex": f"{LEFT_HISTORY_RATIO} 1 0%",
+                                "background": "#fff",
+                                "borderRadius": "12px",
+                                "padding": "18px 16px",
+                                "marginTop": "16px",
+                                "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
                                 "display": "flex",
                                 "flexDirection": "column",
                                 "minWidth": 0,
                                 "minHeight": 0,
-                                "background": "#f9fafb",  # Match middle column
-                                "borderRadius": "14px",
-                                "boxShadow": "0 2px 12px rgba(0,0,0,0.06)",
-                                "padding": "24px 18px",
-                                "boxSizing": "border-box", 
-                                "marginBottom": "0",
                             },
                             children=[
-                                # History at the top
-                                html.Div("History",
-                                         className="material-label",
-                                         style={"marginBottom": "4px", "fontWeight": "bold", "color": "#333"}),
+                                html.Div(
+                                    "History",
+                                    style={"fontWeight": "bold", "marginBottom": "6px"},
+                                ),
                                 html.Div(
                                     id="sketch-history-list",
-                                    className="material-history",
+                                    style={
+                                        "display": "flex",
+                                        "flexDirection": "row",
+                                        "columnGap": "12px",
+                                        "overflowX": "auto",
+                                        "overflowY": "hidden",
+                                        "flex": "1 1 0%",
+                                        "minHeight": 0,
+                                    },
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+                # ═════════ RIGHT COLUMN ═════════
+                html.Div(
+                    style={
+                        "display": "flex",
+                        "flexDirection": "column",
+                        "height": "100%",
+                        "minWidth": 0,
+                        "minHeight": 0,
+                        "rowGap": "16px",          # restored spacing
+                    },
+                    children=[
+                        # ③ query controls
+                        html.Div(
+                            style={
+                                "flex": f"{RIGHT_CTRL_RATIO} 1 0%",
+                                "background": "#fff",
+                                "borderRadius": "12px",
+                                "padding": "18px 16px",
+                                "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
+                                "display": "flex",
+                                "flexDirection": "column",
+                                "rowGap": "10px",
+                                "minWidth": 0,
+                                "minHeight": 0,
+                            },
+                            children=[
+                                html.Div("Query Controls", style={"fontWeight": "bold"}),
+                                dcc.Dropdown(
+                                    id="series-name-filter",
+                                    options=[{"label": n, "value": n} for n in series["titles"]],
+                                    value=[],
+                                    multi=True,
+                                    placeholder="Select stock names…",
+                                    style={"border": "none"},
+                                ),
+                                dcc.Dropdown(
+                                    id="distance-measure-dropdown",
+                                    options=[
+                                        {"label": "Euclidean", "value": "euclidean"},
+                                        {"label": "DTW", "value": "dtw"},
+                                        {"label": "Qetch", "value": "qetch"},
+                                    ],
+                                    value="euclidean",
+                                    clearable=False,
+                                    style={"border": "none"},
+                                ),
+                            ],
+                        ),
+                        # ④ series selector
+                        html.Div(
+                            style={
+                                "flex": f"{RIGHT_SELECT_RATIO} 1 0%",
+                                "background": "#fff",
+                                "borderRadius": "12px",
+                                "padding": "18px 12px",
+                                "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
+                                "display": "flex",
+                                "flexDirection": "column",
+                                "overflow": "hidden",
+                                "minWidth": 0,
+                                "minHeight": 0,
+                            },
+                            children=[
+                                html.Div("Select Series", style={"fontWeight": "bold", "marginBottom": "8px"}),
+                                dcc.Store(id="auto-select-series", data=[]),
+                                dcc.Store(id="selected-series-store", data=[]),
+                                dcc.Store(id="match-results-store", data={}),
+                                html.Div(
+                                    id="series-selector-container",
                                     style={
                                         "overflowY": "auto",
-                                        "flex": "0 0 60px",
-                                        "marginBottom": "12px"
-                                    }
+                                        "flex": "1 1 0%",
+                                        "rowGap": "4px",
+                                        "paddingRight": "4px",
+                                        "minHeight": 0,
+                                    },
                                 ),
-
-                                # Sketch controls and canvas
+                            ],
+                        ),
+                        # ⑤ sketch canvas + controls
+                        html.Div(
+                            style={
+                                "flex": f"{RIGHT_SKETCH_RATIO} 1 0%",
+                                "background": "#fff",
+                                "borderRadius": "12px",
+                                "padding": "18px 16px",
+                                "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
+                                "display": "flex",
+                                "flexDirection": "column",
+                                "minWidth": 0,
+                                "minHeight": 0,
+                            },
+                            children=[
+                                # hidden stores (unchanged) ………………………………………
                                 dcc.Store(id="sketch-history-store", data={}),
                                 dcc.Store(id="active-sketch-id", data=None),
                                 dcc.Store(id="sketch-refresh-key", data=0),
                                 dcc.Store(id="sketch-shape-store"),
                                 dcc.Store(id="distance-threshold-store", data=1.0),
                                 dcc.Store(id="window-size-store", data=7),
-                                html.Div("Series Filters",
-                                         className="material-label",
-                                         style={"marginBottom": "10px", "marginTop": "12px", "fontWeight": "bold", "color": "#333"}),
-                                html.Div(
-                                    className="material-flex-row",
-                                    style={"marginBottom": "8px"},
-                                    children=[
-                                        dcc.Dropdown(
-                                            id="series-name-filter",
-                                            options=[{"label": n, "value": n} for n in series["titles"]],
-                                            value=[],
-                                            multi=True,
-                                            placeholder="Select stock names…",
-                                            # className="material-dropdown",
-                                            style={"flex": 7, 
-                                                   "border": "none"}
-                                        ),
-                                        dcc.Dropdown(
-                                            id="distance-measure-dropdown",
-                                            options=[
-                                                {"label": "Euclidean", "value": "euclidean"},
-                                                {"label": "DTW", "value": "dtw"},
-                                                {"label": "Qetch", "value": "qetch"}],
-                                            value="euclidean",
-                                            clearable=False,
-                                            # className="material-dropdown",
-                                            style={"flex": 3,
-                                                   "border": "none"}
-                                        )
-                                    ]
-                                ),
 
+                                # title
                                 html.Div("Sketch Canvas",
-                                         className="material-label",
-                                         style={"marginBottom": "10px", "marginTop": "12px", "fontWeight": "bold", "color": "#333"}),
-                                # Sketch canvas in the middle
-                                html.Div(id="sketch-graph-container", 
-                                         style={"flex": "1 1 0%",
-                                                "minHeight": 0,
-                                                "marginBottom": "12px",
-                                                "borderRadius": "10px",         # Add rounded corners
-                                                "overflow": "hidden"            # Ensure child respects border radius
-                                            }
-                                        ),
+                                         style={"fontWeight": "bold", "marginBottom": "6px"}),
 
-                                # Controls at the bottom
-                                html.Div(
-                                    className="material-flex-row",
-                                    style={"marginTop": "6px"},
-                                    children=[
-                                        html.Button("Submit",
-                                                    id="submit-sketch",
-                                                    n_clicks=0,
-                                                    className="material-btn"),
-                                        html.Button("Clear",
-                                                    id="refresh-sketch",
-                                                    n_clicks=0,
-                                                    className="material-btn secondary")
-                                    ]
-                                ),
+                                # canvas gets almost all card height
+                                html.Div(id="sketch-graph-container",
+                                         style={
+                                             "flex": "1 1 auto",  # ← expands
+                                             "minHeight": 0,
+                                             "marginBottom": "0"  # no gap below canvas
+                                         }),
 
+                                # ───────── compact footer ─────────
                                 html.Div(
-                                    className="material-flex-row",
-                                    style={"marginTop": "10px", 
-                                           "height": "60px",},
-                                    children=[
-                                        html.Label("Window Size",
-                                                   className="material-label"),
-                                        html.Div(
-                                            dcc.RangeSlider(
-                                                id="window-size-slider",
-                                                step=1, value=[7, 30],
-                                                allowCross=False,
-                                                tooltip={
-                                                    "placement": "top",
-                                                    "always_visible": False
-                                                },
-                                                className="material-slider"
-                                            ),
-                                            style={
-                                                "flexGrow": 1,
-                                                "border": "none",        # ✅ Style the wrapper
-                                                "background": "#fff"
-                                            }
-                                        )
-                                    ]
-                                ),
-
-                                html.Div(
-                                    className="material-flex-col",
                                     style={
-                                        "marginTop": "10px",
-                                        "borderRadius": "10px",
-                                        "overflow": "hidden"
+                                        "flex": "0 0 150px",  # ← only 150 px high
+                                        "display": "flex",
+                                        "flexDirection": "column",
+                                        "rowGap": "8px"
                                     },
                                     children=[
+
+                                        # ① buttons
+                                        html.Div(
+                                            style={"display": "flex", "columnGap": "8px"},
+                                            children=[
+                                                html.Button("Submit", id="submit-sketch",
+                                                            n_clicks=0, className="material-btn",
+                                                            style={"flex": "1 1 0%"}),
+                                                html.Button("Clear", id="refresh-sketch",
+                                                            n_clicks=0, className="material-btn secondary",
+                                                            style={"flex": "1 1 0%"})
+                                            ]
+                                        ),
+
+                                        # ② window-size slider
+                                        html.Label("Window Size"),
+                                        dcc.RangeSlider(
+                                            id="window-size-slider",
+                                            step=1, value=[7, 30], allowCross=False,
+                                            tooltip={"placement": "top"}, className="material-slider"
+                                        ),
+
+                                        # ③ histogram (shorter) + threshold slider
                                         dcc.Graph(
                                             id="distance-histogram",
                                             config={"displayModeBar": False},
-                                            figure={  # Empty histogram on app start
-                                                "data": [],
-                                                "layout": {
-                                                    "margin": dict(t=8, b=8, l=8, r=8),
-                                                    "height": 90,
-                                                    "bargap": 0.2,
-                                                    "plot_bgcolor": 'rgba(0,0,0,0)',
-                                                    "paper_bgcolor": 'rgba(0,0,0,0)',
-                                                    "showlegend": False
-                                                }
-                                            },
                                             style={
-                                                "height": "120px",
+                                                "height": "60px",  # ← was 110 px
                                                 "width": "100%",
                                                 "minWidth": 0,
-                                                "margin": 0,
-                                                "padding": 0
+                                                "margin": 0
                                             }
                                         ),
-                                        html.Div(
-                                            dcc.Slider(
-                                                id="distance-threshold-slider",
-                                                min=0, max=6, step=0.01, value=1.0,
-                                                updatemode="drag",
-                                                className="material-slider",
-                                                marks={0: "0", 6: "Max"},
-                                                included=False
-                                            ),
-                                            style={
-                                                "flexGrow": 1,
-                                                "border": "none",
-                                                "background": "#fff"
-                                            }
-                                        )
+                                        dcc.Slider(
+                                            id="distance-threshold-slider",
+                                            min=0, max=6, step=0.01, value=1.0,
+                                            updatemode="drag",
+                                            marks={0: "0", 6: "Max"},
+                                            included=False,
+                                            className="material-slider"
+                                        ),
                                     ]
                                 )
                             ]
-                        )
-                    ]
-                )
-            ]
+                        ),
+                    ],
+                ),
+            ],
         ),
-
-        # shared hidden stores
+        # ─── global hidden stores ───
         dcc.Store(id="sketch-color-list", data=color_list),
         dcc.Store(id="sketch-selection-list", data=initial_selection),
         dcc.Store(id="series-to-sketch-map", data={}),
         dcc.Store(id="active-patterns", data={}),
-        dcc.Store(id="active-patterns-with-selection", data={})
-    ]
+        dcc.Store(id="active-patterns-with-selection", data={}),
+    ],
 )

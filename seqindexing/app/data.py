@@ -79,8 +79,7 @@ def query_chroma_topk_for_each_name(histories: dict[str, list[float]], k: int = 
         hits = []
         for idx, name in enumerate(filtered_titles):
             # print(f"Querying {name} for sketch_id {sketch_id}...")
-            query_vector = series["y"][idx]
-            interpolated = interpolate_to_fixed_size(np.array(query_vector), target_size=32)
+            interpolated = interpolate_to_fixed_size(np.array(vector), target_size=32)
             results = collection.query(
                 query_embeddings=[interpolated.tolist()],
                 n_results=k,

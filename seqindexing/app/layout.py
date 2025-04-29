@@ -1,4 +1,3 @@
-# layout.py  –  two-column layout with scrolling Select-Series card
 from dash import dcc, html
 from .data   import series
 from .utils  import get_color_palette
@@ -345,13 +344,24 @@ layout = html.Div(
                                     className="material-flex-col",
                                     style={
                                         "marginTop": "10px",
-                                        "borderRadius": "10px",    # Add rounded corners to the histogram box
-                                        "overflow": "hidden"       # Ensure child respects border radius
+                                        "borderRadius": "10px",
+                                        "overflow": "hidden"
                                     },
                                     children=[
                                         dcc.Graph(
                                             id="distance-histogram",
                                             config={"displayModeBar": False},
+                                            figure={  # Empty histogram on app start
+                                                "data": [],
+                                                "layout": {
+                                                    "margin": dict(t=8, b=8, l=8, r=8),
+                                                    "height": 90,
+                                                    "bargap": 0.2,
+                                                    "plot_bgcolor": 'rgba(0,0,0,0)',
+                                                    "paper_bgcolor": 'rgba(0,0,0,0)',
+                                                    "showlegend": False
+                                                }
+                                            },
                                             style={
                                                 "height": "120px",
                                                 "width": "100%",
@@ -369,9 +379,12 @@ layout = html.Div(
                                                 marks={0: "0", 6: "Max"},
                                                 included=False
                                             ),
-                                            style={"flexGrow": 1,
-                                                   "border": "none",        # ✅ Style the wrapper
-                                                   "background": "#fff"})
+                                            style={
+                                                "flexGrow": 1,
+                                                "border": "none",
+                                                "background": "#fff"
+                                            }
+                                        )
                                     ]
                                 )
                             ]

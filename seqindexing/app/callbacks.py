@@ -20,8 +20,10 @@ def register_callbacks(app):
         Input('window-size-slider', 'value'), 
         State("series-to-sketch-map", "data"),
         State("sketch-color-list", "data"),
+        Input("active-patterns-with-selection", "data"),
+        Input("active-sketch-id", "data")
     )
-    def update_series_preview_list(selected, match_data, threshold, filtered_names, window_size_range, series_to_sketch, color_list):
+    def update_series_preview_list(selected, match_data, threshold, filtered_names, window_size_range, series_to_sketch, color_list, patterns_history_with_selection, active_sketch_id):
         print(f"update_series_preview_list triggered with selected={selected}, threshold={threshold}, filtered_names={filtered_names}, window_size_range={window_size_range}")
         children = []
         x_max = max(series["x"])
@@ -30,7 +32,7 @@ def register_callbacks(app):
 
         # Decide which names to show
         if not match_data:
-            sorted_names = sorted(titles)[:10]
+            sorted_names = sorted(titles)[:20]
         else:
             match_counts = {
                 name: sum(
@@ -43,6 +45,9 @@ def register_callbacks(app):
             sorted_names = sorted(filtered, key=lambda n: -filtered[n])
 
         selected = selected or []
+        prev_selected_series = [v["selected_series"] for k, v in patterns_history_with_selection.items() if v.get("selected_series") is not None][:-1]
+        print(f"prev_selected_series = {prev_selected_series}")
+        prev_patterns = list(patterns_history_with_selection.keys())
 
         for name in sorted_names:
             if filtered_names and name not in filtered_names:
@@ -66,24 +71,27 @@ def register_callbacks(app):
                     for pattern_id, matches in match_data[name].items()
                 }
                 for p_idx, (pattern_id, matches) in enumerate(pattern_intervals.items()):
-                    for match in matches:
-                        shapes.append({
-                            'type': 'rect',
-                            'xref': 'x',
-                            'yref': 'paper',
-                            'x0': series["x"][match['start_idx']],
-                            'x1': min(series["x"][match['end_idx']], x_max),
-                            'y0': 0,
-                            'y1': 1,
-                            'fillcolor': color_list[p_idx % len(color_list)],
-                            'opacity': 0.25,
-                            'line': {
-                                'width': 1,
-                                'color': color_list[p_idx % len(color_list)],
-                                'dash': ['solid', 'dot', 'dash', 'longdash'][p_idx % 4]
-                            },
-                            'layer': 'below'
-                        })
+                    if (patterns_history_with_selection == {} or  # case 1: initial preview generation
+                            pattern_id == active_sketch_id or  # case 2: current
+                            (pattern_id in prev_patterns and str(name_to_index[name]) in prev_selected_series)):
+                        for match in matches:
+                            shapes.append({
+                                'type': 'rect',
+                                'xref': 'x',
+                                'yref': 'paper',
+                                'x0': series["x"][match['start_idx']],
+                                'x1': min(series["x"][match['end_idx']], x_max),
+                                'y0': 0,
+                                'y1': 1,
+                                'fillcolor': color_list[p_idx % len(color_list)],
+                                'opacity': 0.25,
+                                'line': {
+                                    'width': 1,
+                                    'color': color_list[p_idx % len(color_list)],
+                                    'dash': ['solid', 'dot', 'dash', 'longdash'][p_idx % 4]
+                                },
+                                'layer': 'below'
+                            })
 
             children.append(html.Div([
                 dcc.Graph(

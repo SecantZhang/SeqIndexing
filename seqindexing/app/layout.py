@@ -360,7 +360,7 @@ layout = html.Div(
                                                 value=[],
                                                 multi=True,
                                                 placeholder="Select stock names…",
-                                                style={"border": "none", "flex": "1 1 0%"},
+                                                style={"border": "none", "flex": "1 1 0%", "minHeight": "40",},
                                             ),
                                             dcc.Dropdown(
                                                 id="distance-measure-dropdown",
@@ -369,20 +369,81 @@ layout = html.Div(
                                                     {"label": "DTW", "value": "dtw"},
                                                     {"label": "Qetch", "value": "qetch"},
                                                 ],
-                                                value="euclidean",
-                                                clearable=False,
-                                                style={"border": "none", "minWidth": "120px", "flex": "0 0 120px"},
+                                                value=None,  # No default selection
+                                                clearable=True,
+                                                placeholder="distance",
+                                                style={"border": "none", "minWidth": "100px", "flex": "0 0 100px", "minHeight": "40"}
                                             ),
+                                            dcc.Dropdown(
+                                                id="window-size-unit-dropdown",
+                                                options=[
+                                                    {"label": "minutes", "value": "minutes"},
+                                                    {"label": "hours", "value": "hours"},
+                                                    {"label": "days", "value": "days"},
+                                                    {"label": "weeks", "value": "weeks"},
+                                                    {"label": "months", "value": "months"},
+                                                    {"label": "years", "value": "years"},
+                                                ],
+                                                value=None,  # No default selection
+                                                clearable=True,
+                                                placeholder="unit",
+                                                style={
+                                                    "border": "none",
+                                                    "minWidth": "100px",
+                                                    "flex": "0 0 100px", 
+                                                    "minHeight": "40"
+                                                },
+                                            ),
+                                            
+                                            html.Div([
+                                                html.Div([
+                                                    html.Label("Min:", className="nudb-widget-header-small"),
+                                                    html.Label("Max:", className="nudb-widget-header-small"),
+                                                ], style={"display": "flex",
+                                                          "flexDirection": "column",
+                                                          "alignItems": "flex-start",
+                                                          "gap": "0px",
+                                                          "borderRadius": "8px",
+                                                          "justifyContent": "center"}), 
+                                                
+                                                html.Div([
+                                                    dcc.Input(
+                                                        id="window-size-min-input",
+                                                        type="number",
+                                                        min=1,
+                                                        step=1,
+                                                        value=7,
+                                                        style={"width": "30px", 
+                                                               "border": "none",
+                                                               "borderRadius": "2px",
+                                                               "marginBottom": "5px", 
+                                                               "marginTop": "3px"}
+                                                    ),
+                                                    dcc.Input(
+                                                        id="window-size-max-input",
+                                                        type="number",
+                                                        min=1,
+                                                        step=1,
+                                                        value=30,
+                                                        style={"width": "30px", 
+                                                               "border": "none",
+                                                               "borderRadius": "2px",}
+                                                ),], style={"display": "flex",
+                                                            "flexDirection": "column",
+                                                            "alignItems": "flex-start",
+                                                            "gap": "0px",
+                                                            "borderRadius": "8px",
+                                                            "justifyContent": "center"}
+                                                ), 
+                                            ], style={"display": "flex",
+                                                  "flexDirection": "row",
+                                                  "alignItems": "flex-start",
+                                                  "gap": "0px",
+                                                  "borderRadius": "8px",
+                                                  "justifyContent": "center"}), 
                                         ]
                                     ),
-                                    html.Div([
-                                        # html.Div("Window Size Range Selector", className="nudb-subheader-small"),
-                                        dcc.RangeSlider(
-                                            id="window-size-slider",
-                                            step=1, value=[7, 30], allowCross=False,
-                                            tooltip={"placement": "top"}, className="material-slider"
-                                        ),
-                                    ], style={"flex": "1 1 0%"}),
+                                    
                                 ], className="control-group"),
                                 
                                 html.Div(id="sketch-graph-container",

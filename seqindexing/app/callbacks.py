@@ -17,14 +17,15 @@ def register_callbacks(app):
         Input('match-results-store', 'data'),
         Input('distance-threshold-store', 'data'),
         Input('series-name-filter', 'value'),
-        Input('window-size-slider', 'value'), 
+        Input("window-size-min-input", "value"),
+        Input("window-size-max-input", "value"),
         State("series-to-sketch-map", "data"),
         State("sketch-color-list", "data"),
         Input("active-patterns-with-selection", "data"),
         Input("active-sketch-id", "data")
     )
-    def update_series_preview_list(selected, match_data, threshold, filtered_names, window_size_range, series_to_sketch, color_list, patterns_history_with_selection, active_sketch_id):
-        print(f"update_series_preview_list triggered with selected={selected}, threshold={threshold}, filtered_names={filtered_names}, window_size_range={window_size_range}")
+    def update_series_preview_list(selected, match_data, threshold, filtered_names, min_ws, max_ws, series_to_sketch, color_list, patterns_history_with_selection, active_sketch_id):
+        print(f"update_series_preview_list triggered with selected={selected}, threshold={threshold}, filtered_names={filtered_names}, min_ws={min_ws}, max_ws={max_ws}")
         children = []
         x_max = max(series["x"])
         titles = series["titles"]
@@ -62,7 +63,6 @@ def register_callbacks(app):
             # only show shading in the mini‐chart if that card is selected
             shapes = []
             if match_data and name in match_data:
-                min_ws, max_ws = window_size_range
                 pattern_intervals = {
                     pattern_id: [
                         match for match in matches
@@ -189,9 +189,10 @@ def register_callbacks(app):
         Input("active-patterns-with-selection", "data"),
         Input('selected-series-store', 'data'),
         State("distance-threshold-store", "data"),
-        State("window-size-slider", "value"),
+        Input("window-size-min-input", "value"),
+        Input("window-size-max-input", "value"),
     )
-    def update_main_plot(active_patterns, selected, threshold, window_size_range):
+    def update_main_plot(active_patterns, selected, threshold, min_ws, max_ws):
         print(f"update_main_plot triggered")
         fig = go.Figure()
         xaxis_style = dict(
@@ -246,7 +247,6 @@ def register_callbacks(app):
 
         x_max = max(series["x"])
         titles = series["titles"]
-        min_ws, max_ws = window_size_range
         selected = set(selected or [])
 
         for pattern_id, pattern_info in active_patterns.items():
@@ -553,12 +553,12 @@ def register_callbacks(app):
 
     @app.callback(
         Output("window-size-store", "data"),
-        Input("window-size-slider", "value")
+        Input("window-size-min-input", "value"),
+        Input("window-size-max-input", "value"),
     )
-    def update_window_size(val):
-        print(f"window size updated with value = {val}")
-        print(f"slider updated with value = {val}")
-        return val
+    def update_window_size(min_val, max_val):
+        print(f"window size updated with min={min_val}, max={max_val}")
+        return [min_val, max_val]
 
     @app.callback(
         Output("window-size-slider", "min"),

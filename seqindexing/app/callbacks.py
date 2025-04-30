@@ -537,7 +537,7 @@ def register_callbacks(app):
                     'line': {'width': 2, 'color': color}
                 }],
                 'layout': {
-                    'height': 40,
+                    'height': 100,
                     'margin': {'l': 0, 'r': 0, 't': 0, 'b': 0},
                     'xaxis': {'visible': False},
                     'yaxis': {'visible': False},

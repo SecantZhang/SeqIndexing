@@ -138,6 +138,7 @@ body {
     padding-left: 14px;
     border-radius: 6px;
     margin-bottom: 0px;
+    margin-left: 0px
 }
 
 .nudb-header-bar-text {
@@ -155,4 +156,16 @@ body {
     letter-spacing: 0.01em;
     font-family: 'Roboto', Arial, sans-serif;
     padding-left: 10px
+}
+
+.control-group {
+    /* color: #808080; */
+    background-color: #f5f5f5;
+    border-radius: 12px;
+}
+.material-slider,
+.material-slider .rc-slider,
+.material-slider .rc-slider-track,
+.material-slider .rc-slider-rail {
+    background: transparent !important;
 }

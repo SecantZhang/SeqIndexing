@@ -196,7 +196,7 @@ def register_callbacks(app):
         fig = go.Figure()
         xaxis_style = dict(
             rangeslider=dict(visible=True, thickness=0.07, bgcolor="#f5f5f5"),
-            type='linear',
+            type='date',
             showgrid=True,
             gridcolor='#eeeeee',
             zeroline=False,
@@ -255,7 +255,7 @@ def register_callbacks(app):
             i = int(pattern_info["selected_series"])
             # Draw the main series line
             fig.add_trace(go.Scatter(
-                x=series["x"],
+                x=series["x_date"],
                 y=series["y"][i],
                 mode='lines',
                 name=f"{pattern_info['selected_series_name']}",
@@ -265,8 +265,8 @@ def register_callbacks(app):
             for match in matched_patterns[pattern_info["selected_series_name"]]:
                 if match["score"] is not None and match["score"] <= threshold and min_ws <= match["window_size"] <= max_ws:
                     fig.add_vrect(
-                        x0=series["x"][match["start_idx"]],
-                        x1=min(series["x"][match["end_idx"]], x_max),
+                        x0=series["x_date"][match["start_idx"]],
+                        x1=min(series["x_date"][match["end_idx"]], series["x_date"][-1]),
                         fillcolor=color,
                         opacity=0.25,
                         layer='below',

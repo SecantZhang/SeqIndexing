@@ -24,7 +24,8 @@ series = {
     "y": series_y,
     "x": np.arange(df.shape[0]),
     "titles": df.columns.tolist(),
-    "shape": series_y.shape
+    "shape": series_y.shape, 
+    "x_date": df.index.tolist(),
 }
 
 

@@ -307,7 +307,7 @@ layout = html.Div(
                                                 options=[{"label": n, "value": n} for n in series["titles"]],
                                                 value=[],
                                                 multi=True,
-                                                placeholder="Series Selector",
+                                                placeholder="Filter...",
                                                 style={"minWidth": "150px", 
                                                        "flex": "1 1 0%", 
                                                        "border": "none", 
@@ -403,7 +403,7 @@ layout = html.Div(
                                                 options=[{"label": n, "value": n} for n in series["titles"]],
                                                 value=[],
                                                 multi=True,
-                                                placeholder="Select stock names…",
+                                                placeholder="Select...",
                                                 style={"border": "none", "flex": "1 1 0%", "minHeight": "40",},
                                             ),
                                             dcc.Dropdown(

@@ -375,8 +375,8 @@ def register_callbacks(app):
             opacity=0.85
         ))
         hist_fig.update_layout(
-            margin=dict(t=2, b=2, l=2, r=2),
-            height=60,  # compact height
+            margin=dict(t=2, b=20, l=0, r=0),
+            height=90,  # compact height
             bargap=0.1,
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
@@ -390,8 +390,11 @@ def register_callbacks(app):
                 linecolor='#e0e0e0',
                 linewidth=1,
                 title='',              # no title for compactness
+                anchor = "y",
+                position = 0  # forces x-axis to bottom
             ),
             yaxis=dict(
+                visible = False,
                 showticklabels=False,
                 showgrid=False,
                 zeroline=False,

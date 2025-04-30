@@ -107,18 +107,18 @@ layout = html.Div(
                                     },
                                     children=[
                                         html.Div([
-                                            html.Div("Series Filter", className="nudb-subheader-small"),
-                                            dcc.Dropdown(
-                                                id="main-series-filter",
-                                                options=[{"label": n, "value": n} for n in series["titles"]],
-                                                value=[],
-                                                multi=True,
-                                                placeholder="Filter series…",
-                                                style={"minWidth": "200px", "flex": "1 1 0%"}
-                                            ),
+                                            # html.Div("Series Filter", className="nudb-subheader-small"),
+                                            # dcc.Dropdown(
+                                            #     id="main-series-filter",
+                                            #     options=[{"label": n, "value": n} for n in series["titles"]],
+                                            #     value=[],
+                                            #     multi=True,
+                                            #     placeholder="Filter series…",
+                                            #     style={"minWidth": "200px", "flex": "1 1 0%"}
+                                            # ),
                                         ], style={"flex": "3 1 0%"}),
                                         html.Div([
-                                            html.Div("Dataset", className="nudb-subheader-small"),
+                                            # html.Div("Dataset", className="nudb-subheader-small"),
                                             dcc.Dropdown(
                                                 id="main-dataset-selector",
                                                 options=[
@@ -126,7 +126,8 @@ layout = html.Div(
                                                     {"label": "NASDAQ", "value": "dataset_b"},
                                                     {"label": "Dow Jones", "value": "dataset_c"},
                                                 ],
-                                                value="dataset_a",
+                                                # value="dataset_a",
+                                                placeholder="Select Dataset",
                                                 clearable=False,
                                                 style={"minWidth": "160px", "flex": "0 0 160px"}
                                             ),
@@ -287,12 +288,52 @@ layout = html.Div(
                                             "justifyContent": "center",
                                             "background": "transparent",
                                         }
-                                    ),], className="control-group"
-                                ), 
+                                    ),
+                                    html.Div(
+                                        style={
+                                            "width": "100%",
+                                            "margin": "10px 0 8px 0",
+                                            "display": "flex",
+                                            "flexDirection": "row",
+                                            "alignItems": "center",
+                                            "gap": "10px",
+                                        },
+                                        children=[
+                                            dcc.Dropdown(
+                                                id="main-series-filter",
+                                                options=[{"label": n, "value": n} for n in series["titles"]],
+                                                value=[],
+                                                multi=True,
+                                                placeholder="Filter series…",
+                                                style={"minWidth": "150px", 
+                                                       "flex": "1 1 0%", 
+                                                       "border": "none", 
+                                                       "flex": "1 1 0%", 
+                                                       "minHeight": "30",
+                                                       "marginLeft": "4px",}
+                                            ),
+                                            dcc.Dropdown(
+                                                id="series-sort-dropdown",
+                                                options=[
+                                                    {"label": "Match Count", "value": "match_count"},
+                                                    {"label": "Alphabetically", "value": "alphabetical"},
+                                                ],
+                                                # value="match_count",
+                                                placeholder="Sort by",
+                                                clearable=False,
+                                                style={"minWidth": "60px", 
+                                                       "flex": "0 0 140px", 
+                                                       "border": "none", 
+                                                       "minHeight": "30",
+                                                       "marginRight": "6px",}
+                                            ),
+                                        ]
+                                    ),
+                                ], className="control-group"), 
                                 # Series Selector section
                                 html.Div(
                                     children=[
-                                        html.Div("Series Selector", className="nudb-subheader-small", style={"marginBottom": "6px"}),
+                                        # html.Div("Series Selector", className="nudb-subheader-small", style={"marginBottom": "6px"}),
                                         html.Div(
                                             id="series-selector-container",
                                             style={

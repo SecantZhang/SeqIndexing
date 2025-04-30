@@ -307,7 +307,7 @@ layout = html.Div(
                                                 options=[{"label": n, "value": n} for n in series["titles"]],
                                                 value=[],
                                                 multi=True,
-                                                placeholder="Filter series…",
+                                                placeholder="Series Selector",
                                                 style={"minWidth": "150px", 
                                                        "flex": "1 1 0%", 
                                                        "border": "none", 
@@ -417,6 +417,31 @@ layout = html.Div(
                                                 clearable=True,
                                                 placeholder="distance",
                                                 style={"border": "none", "minWidth": "100px", "flex": "0 0 100px", "minHeight": "40"}
+                                            ),
+                                            dcc.Input(
+                                                id="k-input",
+                                                type="number",
+                                                placeholder="k",
+                                                min=1,
+                                                step=1,
+                                                # value=10,
+                                                style={
+                                                    "width": "40px",
+                                                    "border": "none",
+                                                    "borderRadius": "4px",
+                                                    "minHeight": "36px",
+                                                    "height": "36px",
+                                                    "fontSize": "1rem",
+                                                    "paddingLeft": "8px",
+                                                    "paddingRight": "8px",
+                                                    "boxSizing": "border-box",
+                                                    "background": "#fff",
+                                                    "display": "flex",
+                                                    "alignItems": "center",
+                                                    # Hide spin buttons (Chrome, Safari, Edge)
+                                                    "MozAppearance": "textfield",
+                                                },
+                                                inputMode="numeric",  # Optional: mobile-friendly numeric keyboard
                                             ),
                                             dcc.Dropdown(
                                                 id="window-size-unit-dropdown",

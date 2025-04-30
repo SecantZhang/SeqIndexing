@@ -47,8 +47,8 @@ layout = html.Div(
         "rowGap": "16px",
         "background": "#f2f4f7",
         "borderRadius": "14px",
-        "boxShadow": "0 4px 16px rgba(0,0,0,0.1)",
-        "overflow": "hidden",  # prevent outer scrollbars
+        # "boxShadow": "0 4px 16px rgba(0,0,0,0.1)",
+        # "overflow": "hidden",  # prevent outer scrollbars
     },
     children=[
         # top_bar,
@@ -70,6 +70,8 @@ layout = html.Div(
                         "height": "100%",
                         "minWidth": 0,
                         "minHeight": 0,
+                        "boxShadow": "0 4px 16px rgba(0,0,0,0.1)",
+                        "borderRadius": "12px",
                     },
                     children=[
                         # ① main plot
@@ -78,12 +80,13 @@ layout = html.Div(
                                 "flex": f"1 1 0%",
                                 "background": "#fff",
                                 "borderRadius": "12px",
-                                "padding": "20px",
+                                "padding": "18px 12px",
                                 "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
                                 "minWidth": 0,
                                 "minHeight": 0,
                                 "display": "flex",
                                 "flexDirection": "column",
+                                "overflow": "hidden",
                             },
                             children=[
                                 html.Div(
@@ -190,6 +193,7 @@ layout = html.Div(
                         "minWidth": 0,
                         "minHeight": 0,
                         "rowGap": "16px",          # restored spacing
+                        # "boxShadow": "0 4px 16px rgba(0,0,0,0.1)", 
                     },
                     children=[
                         # ③ query controls
@@ -198,11 +202,12 @@ layout = html.Div(
                                 "flex": f"{RIGHT_CTRL_RATIO} 1 0%",
                                 "background": "#fff",
                                 "borderRadius": "12px",
-                                "padding": "18px 16px",
+                                "padding": "18px 12px",
                                 "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
                                 "display": "flex",
                                 "flexDirection": "column",
-                                "rowGap": "16px",  # more space between sections
+                                "overflow": "hidden",
+                                # "rowGap": "16px",  # more space between sections
                                 "minWidth": 0,
                                 "minHeight": 0,
                             },
@@ -320,6 +325,7 @@ layout = html.Div(
                                 "overflow": "hidden",
                                 "minWidth": 0,
                                 "minHeight": 0,
+                                "boxShadow": "0 4px 16px rgba(0,0,0,0.1)"
                             },
                             children=[
                                 dcc.Store(id="sketch-history-store", data={}),

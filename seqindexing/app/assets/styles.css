@@ -135,10 +135,16 @@ body {
     background: #1976d2;
     display: flex;
     align-items: center;
-    padding-left: 14px;
-    border-radius: 6px;
-    margin-bottom: 0px;
-    margin-left: 0px
+    padding-left: 32px;
+    padding-right: 32px;
+    border-radius: 12px 12px 0 0;
+    margin-left: -20px;   /* match card padding */
+    margin-right: -20px;
+    margin-top: -20px;
+    margin-bottom: 16px;
+    width: calc(100% + 40px); /* expand beyond card padding */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    box-sizing: border-box;
 }
 
 .nudb-header-bar-text {

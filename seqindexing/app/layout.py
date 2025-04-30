@@ -228,12 +228,12 @@ layout = html.Div(
                                                     figure={
                                                         "data": [],
                                                         "layout": {
-                                                            "margin": {"t": 2, "b": 2, "l": 2, "r": 2},
+                                                            "margin": {"t": 2, "b": 20, "l": 0, "r": 0},
                                                             "height": 90,
                                                             "plot_bgcolor": "rgba(0,0,0,0)",
                                                             "paper_bgcolor": "rgba(0,0,0,0)",
                                                             "xaxis": {
-                                                                "showticklabels": False,
+                                                                "showticklabels": True,
                                                                 "showgrid": False,
                                                                 "zeroline": False,
                                                                 "fixedrange": True,
@@ -241,8 +241,11 @@ layout = html.Div(
                                                                 "linecolor": '#e0e0e0',
                                                                 "linewidth": 1,
                                                                 "title": '',
+                                                                "anchor": "y",
+                                                                "position": 0  # forces x-axis to bottom
                                                             },
                                                             "yaxis": {
+                                                                "visible": False,
                                                                 "showticklabels": False,
                                                                 "showgrid": False,
                                                                 "zeroline": False,
@@ -256,7 +259,7 @@ layout = html.Div(
                                                     config={"displayModeBar": False},
                                                     style={
                                                         "height": "90px",
-                                                        "width": "80%",
+                                                        "width": "95%",
                                                         "minWidth": 0,
                                                         "margin": "0 auto",
                                                         "background": "transparent",

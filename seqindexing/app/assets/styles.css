@@ -127,3 +127,32 @@ body {
 .material-sidebar.material-card {
     padding-bottom: 0 !important;
 }
+
+/* Unified blue header bar for all card headers */
+.nudb-header-bar {
+    height: 40px;
+    min-height: 40px;
+    background: #1976d2;
+    display: flex;
+    align-items: center;
+    padding-left: 14px;
+    border-radius: 6px;
+    margin-bottom: 0px;
+}
+
+.nudb-header-bar-text {
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+}
+.nudb-subheader-small {
+    font-size: 0.90rem;
+    font-weight: 500;
+    color: #808080;
+    margin-bottom: 2px;
+    margin-top: 5px;
+    letter-spacing: 0.01em;
+    font-family: 'Roboto', Arial, sans-serif;
+    padding-left: 10px
+}

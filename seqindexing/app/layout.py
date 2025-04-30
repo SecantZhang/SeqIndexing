@@ -8,11 +8,11 @@ import numpy as np
 np.random.seed(0)
 
 # ── add these two constants near the top of layout.py ─────────────
-APP_W = "2000px"      # overall width  (change to taste)
-APP_H = "1200px"       # overall height (change to taste)
+APP_W = "1600px"      # overall width  (change to taste)
+APP_H = "900px"       # overall height (change to taste)
 # ── column shares ─────────────────────────────────────────────────
-LEFT_PLOT_RATIO, LEFT_HISTORY_RATIO = 0.85, 0.15        # left column
-RIGHT_CTRL_RATIO, RIGHT_SELECT_RATIO, RIGHT_SKETCH_RATIO = 0.12, 0.25, 0.63
+LEFT_PLOT_RATIO, LEFT_HISTORY_RATIO = 1, 0        # left column
+RIGHT_CTRL_RATIO, RIGHT_SELECT_RATIO, RIGHT_SKETCH_RATIO = 0.5, 0.5, 0
 # thumbnails are resized by assets/history_previews.css
 # ──────────────────────────────────────────────────────────────────
 
@@ -21,20 +21,20 @@ color_list = get_color_palette(N_SKETCHES)
 initial_selection = []
 
 # ── top bar ───────────────────────────────────────────────────────
-top_bar = html.Div(
-    "SeqIndexing Dashboard",
-    style={
-        "height": "48px",
-        "display": "flex",
-        "alignItems": "center",
-        "padding": "0 32px",
-        "fontWeight": "bold",
-        "fontSize": "1.6rem",
-        "background": "#fff",
-        "borderRadius": "8px",
-        "boxShadow": "0 2px 6px rgba(0,0,0,0.05)",
-    },
-)
+# top_bar = html.Div(
+#     "SeqIndexing Dashboard",
+#     style={
+#         "height": "48px",
+#         "display": "flex",
+#         "alignItems": "center",
+#         "padding": "0 32px",
+#         "fontWeight": "bold",
+#         "fontSize": "1.6rem",
+#         "background": "#fff",
+#         "borderRadius": "8px",
+#         "boxShadow": "0 2px 6px rgba(0,0,0,0.05)",
+#     },
+# )
 
 # ── layout ────────────────────────────────────────────────────────
 layout = html.Div(
@@ -51,7 +51,7 @@ layout = html.Div(
         "overflow": "hidden",  # prevent outer scrollbars
     },
     children=[
-        top_bar,
+        # top_bar,
         # ── workspace grid ─────────────────────────────────────────
         html.Div(
             style={
@@ -75,71 +75,108 @@ layout = html.Div(
                         # ① main plot
                         html.Div(
                             style={
-                                "flex": f"{LEFT_PLOT_RATIO} 1 0%",
+                                "flex": f"1 1 0%",
                                 "background": "#fff",
                                 "borderRadius": "12px",
                                 "padding": "20px",
                                 "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
                                 "minWidth": 0,
                                 "minHeight": 0,
-                            },
-                            children=[
-                                dcc.Graph(
-                                    id="example-plot",
-                                    figure={
-                                        "data": [
-                                            {
-                                                "x": series["x"],
-                                                "y": series["y"][0],
-                                                "type": "line",
-                                                "name": series["titles"][0],
-                                                "line": {"color": "#2196f3"},
-                                            }
-                                        ],
-                                        "layout": {
-                                            "margin": {"t": 20, "l": 30, "r": 10, "b": 32},
-                                            "plot_bgcolor": "#fff",
-                                            "paper_bgcolor": "#fff",
-                                            "xaxis": {"showgrid": True, "gridcolor": "#e0e0e0"},
-                                            "yaxis": {"showgrid": True, "gridcolor": "#e0e0e0"},
-                                        },
-                                    },
-                                    config={"responsive": True},
-                                    style={"height": "100%", "width": "100%", "minWidth": 0},
-                                )
-                            ],
-                        ),
-                        # ② history panel
-                        html.Div(
-                            style={
-                                "flex": f"{LEFT_HISTORY_RATIO} 1 0%",
-                                "background": "#fff",
-                                "borderRadius": "12px",
-                                "padding": "18px 16px",
-                                "marginTop": "16px",
-                                "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
                                 "display": "flex",
                                 "flexDirection": "column",
-                                "minWidth": 0,
-                                "minHeight": 0,
                             },
                             children=[
                                 html.Div(
-                                    "History",
-                                    style={"fontWeight": "bold", "marginBottom": "6px"},
+                                    className="nudb-header-bar",
+                                    children=[
+                                        html.Span("DeepSketch", className="nudb-header-bar-text")
+                                    ],
                                 ),
                                 html.Div(
-                                    id="sketch-history-list",
                                     style={
                                         "display": "flex",
                                         "flexDirection": "row",
                                         "columnGap": "12px",
-                                        "overflowX": "auto",
-                                        "overflowY": "hidden",
-                                        "flex": "1 1 0%",
-                                        "minHeight": 0,
+                                        "alignItems": "center",
+                                        "marginBottom": "14px",
+                                        "marginTop": "6px",
+                                        "paddingLeft": "2px"
                                     },
+                                    children=[
+                                        html.Div([
+                                            html.Div("Series Filter", className="nudb-subheader-small"),
+                                            dcc.Dropdown(
+                                                id="main-series-filter",
+                                                options=[{"label": n, "value": n} for n in series["titles"]],
+                                                value=[],
+                                                multi=True,
+                                                placeholder="Filter series…",
+                                                style={"minWidth": "200px", "flex": "1 1 0%"}
+                                            ),
+                                        ], style={"flex": "3 1 0%"}),
+                                        html.Div([
+                                            html.Div("Dataset", className="nudb-subheader-small"),
+                                            dcc.Dropdown(
+                                                id="main-dataset-selector",
+                                                options=[
+                                                    {"label": "S&P 500", "value": "dataset_a"},
+                                                    {"label": "NASDAQ", "value": "dataset_b"},
+                                                    {"label": "Dow Jones", "value": "dataset_c"},
+                                                ],
+                                                value="dataset_a",
+                                                clearable=False,
+                                                style={"minWidth": "160px", "flex": "0 0 160px"}
+                                            ),
+                                        ], style={"flex": "1 1 0%"})
+                                    ]
                                 ),
+                                html.Div([
+                                    # html.Div("Series Presenter", className="nudb-subheader-small"),
+                                    dcc.Graph(
+                                        id="example-plot",
+                                        figure={
+                                            "data": [
+                                                {
+                                                    "x": series["x"],
+                                                    "y": series["y"][0],
+                                                    "type": "line",
+                                                    "name": series["titles"][0],
+                                                    "line": {"color": "#2196f3"},
+                                                }
+                                            ],
+                                            "layout": {
+                                                "margin": {"t": 20, "l": 30, "r": 10, "b": 32},
+                                                "plot_bgcolor": "#fff",
+                                                "paper_bgcolor": "#fff",
+                                                "xaxis": {"showgrid": True, "gridcolor": "#e0e0e0"},
+                                                "yaxis": {"showgrid": True, "gridcolor": "#e0e0e0"},
+                                            },
+                                        },
+                                        config={"responsive": True},
+                                        style={
+                                            "height": f"550px",  # Fixed height so history list is always visible below
+                                            "width": "100%",
+                                            "minWidth": 0
+                                        },
+                                    ),
+                                ], style={"flex": "3 1 100%"}), 
+                                
+                                html.Div([
+                                    html.Div("Active Queries", className="nudb-subheader-small"),
+                                    html.Div(
+                                        id="sketch-history-list",
+                                        style={
+                                            "display": "flex",
+                                            "flexDirection": "row",
+                                            "columnGap": "12px",
+                                            "overflowX": "auto",
+                                            "overflowY": "auto",
+                                            "minHeight": "60px",   # Ensure it's always visible
+                                            "marginTop": "18px"
+                                        },
+                                    )
+                                ], style={"flex": "1 1 100%"}), 
+                                
                             ],
                         ),
                     ],
@@ -165,31 +202,70 @@ layout = html.Div(
                                 "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
                                 "display": "flex",
                                 "flexDirection": "column",
-                                "rowGap": "10px",
+                                "rowGap": "16px",  # more space between sections
                                 "minWidth": 0,
                                 "minHeight": 0,
                             },
                             children=[
-                                html.Div("Query Controls", style={"fontWeight": "bold"}),
-                                dcc.Dropdown(
-                                    id="series-name-filter",
-                                    options=[{"label": n, "value": n} for n in series["titles"]],
-                                    value=[],
-                                    multi=True,
-                                    placeholder="Select stock names…",
-                                    style={"border": "none"},
+                                html.Div(
+                                    className="nudb-header-bar",
+                                    children=[
+                                        html.Span("Matches", className="nudb-header-bar-text")
+                                    ]
                                 ),
-                                dcc.Dropdown(
-                                    id="distance-measure-dropdown",
-                                    options=[
-                                        {"label": "Euclidean", "value": "euclidean"},
-                                        {"label": "DTW", "value": "dtw"},
-                                        {"label": "Qetch", "value": "qetch"},
+                                # Distance Histogram section
+                                html.Div(
+                                    children=[
+                                        # html.Div("Distance Histogram", className="nudb-subheader-small"),
+                                        html.Div(children=[
+                                            dcc.Graph(
+                                                id="distance-histogram",
+                                                config={"displayModeBar": False},
+                                                style={
+                                                    "height": "60px",
+                                                    "width": "100%",
+                                                    "minWidth": 0,
+                                                    "marginLeft": "5px"
+                                                }
+                                            )], style={"width": "95%"}
+                                        ), 
+                                        dcc.Slider(
+                                            id="distance-threshold-slider",
+                                            min=0, max=6, step=0.01, value=1.0,
+                                            updatemode="drag",
+                                            marks={0: "0", 6: "Max"},
+                                            included=False,
+                                            className="material-slider",
+                                            tooltip={"placement": "bottom"}
+                                        ),
                                     ],
-                                    value="euclidean",
-                                    clearable=False,
-                                    style={"border": "none"},
+                                    style={"marginBottom": "0px", 
+                                           "width": "100%", 
+                                           "alignItems": "center",
+                                           "justifyContent": "center",
+                                       }
                                 ),
+                                # Series Selector section
+                                html.Div(
+                                    children=[
+                                        html.Div("Series Selector", className="nudb-subheader-small", style={"marginBottom": "6px"}),
+                                        html.Div(
+                                            id="series-selector-container",
+                                            style={
+                                                "overflowY": "auto",
+                                                "flex": "1 1 0%",
+                                                "rowGap": "4px",
+                                                "paddingRight": "4px",
+                                                "minHeight": 0,
+                                                "maxHeight": "200px"  # limit height for scroll, adjust as needed
+                                            },
+                                        ),
+                                    ],
+                                    style={"flex": "3 1 100%"}
+                                ),
+                                dcc.Store(id="auto-select-series", data=[]),
+                                dcc.Store(id="selected-series-store", data=[]),
+                                dcc.Store(id="match-results-store", data={}),
                             ],
                         ),
                         # ④ series selector
@@ -207,63 +283,74 @@ layout = html.Div(
                                 "minHeight": 0,
                             },
                             children=[
-                                html.Div("Select Series", style={"fontWeight": "bold", "marginBottom": "8px"}),
-                                dcc.Store(id="auto-select-series", data=[]),
-                                dcc.Store(id="selected-series-store", data=[]),
-                                dcc.Store(id="match-results-store", data={}),
-                                html.Div(
-                                    id="series-selector-container",
-                                    style={
-                                        "overflowY": "auto",
-                                        "flex": "1 1 0%",
-                                        "rowGap": "4px",
-                                        "paddingRight": "4px",
-                                        "minHeight": 0,
-                                    },
-                                ),
-                            ],
-                        ),
-                        # ⑤ sketch canvas + controls
-                        html.Div(
-                            style={
-                                "flex": f"{RIGHT_SKETCH_RATIO} 1 0%",
-                                "background": "#fff",
-                                "borderRadius": "12px",
-                                "padding": "18px 16px",
-                                "boxShadow": "0 2px 10px rgba(0,0,0,0.06)",
-                                "display": "flex",
-                                "flexDirection": "column",
-                                "minWidth": 0,
-                                "minHeight": 0,
-                            },
-                            children=[
-                                # hidden stores (unchanged) ………………………………………
                                 dcc.Store(id="sketch-history-store", data={}),
                                 dcc.Store(id="active-sketch-id", data=None),
                                 dcc.Store(id="sketch-refresh-key", data=0),
                                 dcc.Store(id="sketch-shape-store"),
                                 dcc.Store(id="distance-threshold-store", data=1.0),
                                 dcc.Store(id="window-size-store", data=7),
-
-                                # title
-                                html.Div("Sketch Canvas",
-                                         style={"fontWeight": "bold", "marginBottom": "6px"}),
-
-                                # canvas gets almost all card height
+                                html.Div(
+                                    className="nudb-header-bar",
+                                    children=[
+                                        html.Span("Query", className="nudb-header-bar-text"), 
+                                    ]
+                                ),
+                                
+                                html.Div(
+                                    style={
+                                        "display": "flex",
+                                        "flexDirection": "row",
+                                        "columnGap": "8px",
+                                        "alignItems": "center",
+                                        "marginBottom": "4px"
+                                    },
+                                    children=[
+                                        dcc.Dropdown(
+                                            id="series-name-filter",
+                                            options=[{"label": n, "value": n} for n in series["titles"]],
+                                            value=[],
+                                            multi=True,
+                                            placeholder="Select stock names…",
+                                            style={"border": "none", "flex": "1 1 0%"},
+                                        ),
+                                        dcc.Dropdown(
+                                            id="distance-measure-dropdown",
+                                            options=[
+                                                {"label": "Euclidean", "value": "euclidean"},
+                                                {"label": "DTW", "value": "dtw"},
+                                                {"label": "Qetch", "value": "qetch"},
+                                            ],
+                                            value="euclidean",
+                                            clearable=False,
+                                            style={"border": "none", "minWidth": "120px", "flex": "0 0 120px"},
+                                        ),
+                                    ]
+                                ),
+                                html.Div([
+                                    # html.Div("Window Size Range Selector", className="nudb-subheader-small"),
+                                    dcc.RangeSlider(
+                                        id="window-size-slider",
+                                        step=1, value=[7, 30], allowCross=False,
+                                        tooltip={"placement": "top"}, className="material-slider"
+                                    ),
+                                ], style={"flex": "1 1 0%"}),
+                                
+                                
                                 html.Div(id="sketch-graph-container",
                                          style={
                                              "flex": "1 1 auto",  # ← expands
                                              "minHeight": 0,
                                              "marginBottom": "0"  # no gap below canvas
-                                         }),
-
-                                # ───────── compact footer ─────────
+                                         }
+                                ),
+                                
                                 html.Div(
                                     style={
-                                        "flex": "0 0 150px",  # ← only 150 px high
+                                        # "flex": "0 0 150px",  # ← only 150 px high
                                         "display": "flex",
                                         "flexDirection": "column",
-                                        "rowGap": "8px"
+                                        "rowGap": "8px", 
+                                        "marginTop": "8px",
                                     },
                                     children=[
 
@@ -279,37 +366,9 @@ layout = html.Div(
                                                             style={"flex": "1 1 0%"})
                                             ]
                                         ),
-
-                                        # ② window-size slider
-                                        html.Label("Window Size"),
-                                        dcc.RangeSlider(
-                                            id="window-size-slider",
-                                            step=1, value=[7, 30], allowCross=False,
-                                            tooltip={"placement": "top"}, className="material-slider"
-                                        ),
-
-                                        # ③ histogram (shorter) + threshold slider
-                                        dcc.Graph(
-                                            id="distance-histogram",
-                                            config={"displayModeBar": False},
-                                            style={
-                                                "height": "60px",  # ← was 110 px
-                                                "width": "100%",
-                                                "minWidth": 0,
-                                                "margin": 0
-                                            }
-                                        ),
-                                        dcc.Slider(
-                                            id="distance-threshold-slider",
-                                            min=0, max=6, step=0.01, value=1.0,
-                                            updatemode="drag",
-                                            marks={0: "0", 6: "Max"},
-                                            included=False,
-                                            className="material-slider"
-                                        ),
                                     ]
                                 )
-                            ]
+                            ],
                         ),
                     ],
                 ),

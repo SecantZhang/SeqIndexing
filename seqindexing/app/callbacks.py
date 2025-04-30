@@ -271,8 +271,8 @@ def register_callbacks(app):
                         opacity=0.25,
                         layer='below',
                         line_width=1,
-                        annotation_text=f"Match",
-                        annotation_position='top left'
+                        # annotation_text=f"Match",
+                        # annotation_position='top left'
                     )
 
         fig.update_layout(**layout_style)
@@ -368,19 +368,38 @@ def register_callbacks(app):
         hist_fig = go.Figure()
         hist_fig.add_trace(go.Histogram(
             x=all_scores,
-            nbinsx=30,
+            nbinsx=60,
             marker_color="rgba(33, 150, 243, 0.4)",
             marker_line_color="rgba(33, 150, 243, 1)",
             marker_line_width=1,
             opacity=0.85
         ))
         hist_fig.update_layout(
-            margin=dict(t=8, b=8, l=8, r=8),
-            height=90,
-            bargap=0.2,
+            margin=dict(t=2, b=2, l=2, r=2),
+            height=60,  # compact height
+            bargap=0.1,
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
-            showlegend=False
+            showlegend=False,
+            xaxis=dict(
+                showticklabels=True,   # <-- show x-axis labels
+                showgrid=False,
+                zeroline=False,
+                fixedrange=True,
+                ticks='',
+                linecolor='#e0e0e0',
+                linewidth=1,
+                title='',              # no title for compactness
+            ),
+            yaxis=dict(
+                showticklabels=False,
+                showgrid=False,
+                zeroline=False,
+                fixedrange=True,
+                ticks='',
+                linecolor='#e0e0e0',
+                linewidth=1,
+            ),
         )
 
         return (
@@ -451,13 +470,27 @@ def register_callbacks(app):
                         'margin': {'l': 0, 'r': 0, 't': 0, 'b': 0},
                         'xaxis': {'visible': False},
                         'yaxis': {'visible': False},
-                        'shapes': []
+                        'shapes': [],
+                        'annotations': [{
+                            'text': "sketch your query here",
+                            'xref': "paper",
+                            'yref': "paper",
+                            'showarrow': False,
+                            'font': {'size': 20, 'color': "#bbb", 'family': "Roboto, Arial, sans-serif"},
+                            'x': 0.5,
+                            'y': 0.5,
+                            'xref': 'paper',
+                            'yref': 'paper',
+                            'xanchor': 'center',
+                            'yanchor': 'middle',
+                            'opacity': 0.4,
+                            'captureevents': False,
+                        }]
                     }
                 },
                 style={
                     'height': '100%',
                     'width': '100%',
-                    # 'border': '1px solid #ccc',
                     'minHeight': 0
                 }
             )
@@ -492,9 +525,9 @@ def register_callbacks(app):
 
             # Use selected_series_name from active_patterns if available
             if pattern_uuid in active_pattern_with_sel:
-                selected_series_name = active_pattern_with_sel[pattern_uuid]["selected_series_name"]
+                selected_series_name = active_pattern_with_sel[pattern_uuid].get("selected_series_name") or "No selection"
             else:
-                selected_series_name = ""
+                selected_series_name = "No selection"
             
             preview_fig = {
                 'data': [{
@@ -513,8 +546,8 @@ def register_callbacks(app):
             }
             preview_components.append(html.Div([
                 dcc.Graph(figure=preview_fig, config={'staticPlot': True, 'displayModeBar': False},
-                          style={'height': '40px', 'width': '80px'}),
-                html.Div(selected_series_name, style={'fontSize': '10px', 'textAlign': 'center', 'color': 'black'})
+                          style={'height': '60px', 'width': '60px'}),
+                html.Div(selected_series_name, style={'fontSize': '14px', 'textAlign': 'center', 'color': 'black'})
             ]))
         return preview_components
 

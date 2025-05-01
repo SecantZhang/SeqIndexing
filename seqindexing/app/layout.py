@@ -158,7 +158,7 @@ layout = html.Div(
                                         },
                                         config={"responsive": True},
                                         style={
-                                            "height": f"550px",  # Fixed height so history list is always visible below
+                                            "height": f"600px",  # Fixed height so history list is always visible below
                                             "width": "100%",
                                             "minWidth": 0
                                         },

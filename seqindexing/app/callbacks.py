@@ -214,6 +214,11 @@ def register_callbacks(app):
             linewidth=1,
             tickfont=dict(family="Roboto, Arial, sans-serif", size=13, color="#616161"),
             title_font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
+            title=dict(
+                text="Dollar ($)",
+                standoff=12,
+                font=dict(family="Roboto, Arial, sans-serif", size=15, color="#757575"),
+            ),
         )
         layout_style = dict(
             # title="Active Patterns and Their Matches",

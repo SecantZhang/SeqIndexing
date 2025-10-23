@@ -1,15 +1,12 @@
-import os
 import numpy as np
 import pandas as pd
-from numpy.linalg import norm
-np.random.seed(0)
+from pathlib import Path
 
 from chromadb import PersistentClient
-from chromadb.errors import InvalidCollectionException
 from .utils import interpolate_to_fixed_size
 
 
-CSV_PATH = "/home/zzt7020/NUDB/SeqIndexing/data/sp500.csv"
+CSV_PATH = str((Path(__file__).resolve().parents[2] / "data" / "sp500.csv"))
 
 df = (
     pd.read_csv(CSV_PATH, parse_dates=["Date"])
@@ -30,9 +27,7 @@ series = {
 
 
 def query_chroma_topk(histories: dict[str, list[float]], k: int = 100):
-    print(os.getcwd())
-    # Initialize ChromaDB client and collection
-    client = PersistentClient(path="./seqindexing/data/chroma_db")
+    client = PersistentClient(path="./chroma_db")
     collection = client.get_collection("sp500_series")
 
     all_results = {}
@@ -70,7 +65,7 @@ def query_chroma_topk_for_each_name(histories: dict[str, list[float]], k: int = 
     and flatten all hits into a single list for that sketch_id.
     Returns: {sketch_id: [hit, hit, ...]} (same structure as query_chroma_topk)
     """
-    client = PersistentClient(path="./seqindexing/data/chroma_db")
+    client = PersistentClient(path="./chroma_db")
     collection = client.get_collection("sp500_series")
     if filtered_titles is None: 
         filtered_titles = series["titles"]
@@ -104,29 +99,4 @@ def query_chroma_topk_for_each_name(histories: dict[str, list[float]], k: int = 
     return all_results
 
 
-def generate_dummy_matches(series, sub_len=64, n_subs=3, pattern=None):
-    n_rows, total_len = series.shape
-    result = []
-
-    if pattern is None:
-        # For demo purposes: generate a dummy pattern
-        pattern = np.linspace(0, 1, sub_len)
-
-    # Normalize the pattern
-    pattern = (pattern - np.min(pattern)) / (np.max(pattern) - np.min(pattern) + 1e-8)
-
-    for row in range(n_rows):
-        max_start = total_len - sub_len
-        starts = np.random.choice(max_start + 1, size=n_subs, replace=False)
-
-        subs = []
-        for start in starts:
-            sub = series[row, start:start + sub_len]
-            sub_norm = (sub - np.min(sub)) / (np.max(sub) - np.min(sub) + 1e-8)
-
-            dist = norm(sub_norm - pattern)  # Euclidean distance
-            subs.append((start, start + sub_len if start + sub_len < 365 else 365, float(dist)))
-
-        result.append(subs)
-
-    return result
+    

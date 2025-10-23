@@ -49,3 +49,12 @@ def interpolate_to_fixed_size(arr, target_size):
     x_old = np.linspace(0, 1, len(arr))
     x_new = np.linspace(0, 1, target_size)
     return np.interp(x_new, x_old, arr)
+
+
+def normalize_minmax(arr):
+    arr = np.asarray(arr, dtype=np.float64)
+    min_val = float(np.min(arr))
+    max_val = float(np.max(arr))
+    if max_val == min_val:
+        return np.zeros_like(arr)
+    return (arr - min_val) / (max_val - min_val)

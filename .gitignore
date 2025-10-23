@@ -2,3 +2,5 @@
 /data
 /seqindexing/data/chroma_db
 __pycache__
+/.venv
+/chroma_db

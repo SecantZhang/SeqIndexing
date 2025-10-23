@@ -7,9 +7,9 @@ import numpy as np
 
 np.random.seed(0)
 
-# ── add these two constants near the top of layout.py ─────────────
-APP_W = "1600px"      # overall width  (change to taste)
-APP_H = "900px"       # overall height (change to taste)
+# Responsive sizing
+APP_W = "min(95vw, 1600px)"
+APP_H = "min(92vh, 1000px)"
 # ── column shares ─────────────────────────────────────────────────
 LEFT_PLOT_RATIO, LEFT_HISTORY_RATIO = 1, 0        # left column
 RIGHT_CTRL_RATIO, RIGHT_SELECT_RATIO, RIGHT_SKETCH_RATIO = 0.5, 0.5, 0
@@ -103,7 +103,8 @@ layout = html.Div(
                                         "alignItems": "center",
                                         "marginBottom": "14px",
                                         "marginTop": "6px",
-                                        "paddingLeft": "2px"
+                                        "paddingLeft": "2px",
+                                        "flexWrap": "wrap"
                                     },
                                     children=[
                                         html.Div([
@@ -158,7 +159,7 @@ layout = html.Div(
                                         },
                                         config={"responsive": True},
                                         style={
-                                            "height": f"600px",  # Fixed height so history list is always visible below
+                                            "height": "clamp(420px, 60vh, 680px)",
                                             "width": "100%",
                                             "minWidth": 0
                                         },
@@ -175,11 +176,11 @@ layout = html.Div(
                                             "columnGap": "12px",
                                             "overflowX": "auto",
                                             "overflowY": "auto",
-                                            "minHeight": "60px",   # Ensure it's always visible
+                                            "minHeight": "60px",
                                             "marginTop": "18px"
                                         },
                                     )
-                                ], style={"flex": "1 1 100%"}), 
+                                ], style={"flex": "1 1 100%", "minHeight": 0}), 
                                 
                             ],
                         ),

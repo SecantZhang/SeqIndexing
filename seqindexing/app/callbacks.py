@@ -1,6 +1,6 @@
 from dash import Input, Output, State, callback_context, ALL
 from dash import html, dcc
-from .data import series, query_chroma_topk_for_each_name, generate_dummy_matches
+from .data import series, query_chroma_topk_for_each_name
 from .config import SERIES_WINDOW_SIZE
 from .utils import parse_and_interpolate_path, get_color_palette
 import dash

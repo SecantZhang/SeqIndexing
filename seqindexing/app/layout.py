@@ -4,6 +4,11 @@ from dash import dcc, html
 from .data import series
 from .utils import get_color_palette
 import numpy as np
+try:
+    from seqindexing.data.data_sp500 import WINDOW_SIZES, WINDOW_UNIT
+except Exception:
+    # Fallback for running without package context
+    from ..data.data_sp500 import WINDOW_SIZES, WINDOW_UNIT
 
 np.random.seed(0)
 
@@ -167,7 +172,7 @@ layout = html.Div(
                                 ], style={"flex": "3 1 100%"}), 
                                 
                                 html.Div([
-                                    html.Div("Active Queries", className="nudb-subheader-small"),
+                                    html.Div("Active Queries", className="nudb-subheader-small", style={"paddingLeft": "14px"}),
                                     html.Div(
                                         id="sketch-history-list",
                                         style={
@@ -177,7 +182,12 @@ layout = html.Div(
                                             "overflowX": "auto",
                                             "overflowY": "auto",
                                             "minHeight": "60px",
-                                            "marginTop": "18px"
+                                            "marginTop": "12px",
+                                            "paddingLeft": "20px",
+                                            "paddingRight": "8px",
+                                            "paddingBottom": "6px",
+                                            "scrollPaddingLeft": "20px",
+                                            "boxSizing": "border-box"
                                         },
                                     )
                                 ], style={"flex": "1 1 100%", "minHeight": 0}), 
@@ -378,7 +388,7 @@ layout = html.Div(
                                 dcc.Store(id="sketch-refresh-key", data=0),
                                 dcc.Store(id="sketch-shape-store"),
                                 dcc.Store(id="distance-threshold-store", data=1.0),
-                                dcc.Store(id="window-size-store", data=7),
+                                dcc.Store(id="window-size-store", data=[min(WINDOW_SIZES), max(WINDOW_SIZES)]),
                                 html.Div(children=[
                                     html.Div(
                                         className="nudb-header-bar",
@@ -447,15 +457,12 @@ layout = html.Div(
                                             dcc.Dropdown(
                                                 id="window-size-unit-dropdown",
                                                 options=[
-                                                    {"label": "minutes", "value": "minutes"},
-                                                    {"label": "hours", "value": "hours"},
                                                     {"label": "days", "value": "days"},
                                                     {"label": "weeks", "value": "weeks"},
                                                     {"label": "months", "value": "months"},
-                                                    {"label": "years", "value": "years"},
                                                 ],
-                                                value=None,  # No default selection
-                                                clearable=True,
+                                                value=WINDOW_UNIT,
+                                                clearable=False,
                                                 placeholder="unit",
                                                 style={
                                                     "border": "none",
@@ -463,6 +470,7 @@ layout = html.Div(
                                                     "flex": "0 0 100px", 
                                                     "minHeight": "40"
                                                 },
+                                                disabled=False,
                                             ),
                                             
                                             html.Div([
@@ -482,7 +490,7 @@ layout = html.Div(
                                                         type="number",
                                                         min=1,
                                                         step=1,
-                                                        value=7,
+                                                        value=min(WINDOW_SIZES),
                                                         style={"width": "30px", 
                                                                "border": "none",
                                                                "borderRadius": "2px",
@@ -494,7 +502,7 @@ layout = html.Div(
                                                         type="number",
                                                         min=1,
                                                         step=1,
-                                                        value=30,
+                                                        value=max(WINDOW_SIZES),
                                                         style={"width": "30px", 
                                                                "border": "none",
                                                                "borderRadius": "2px",}

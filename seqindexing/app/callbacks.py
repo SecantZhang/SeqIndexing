@@ -8,6 +8,20 @@ import plotly.graph_objs as go
 import numpy as np
 import uuid
 import copy
+try:
+    from seqindexing.data.data_sp500 import (
+        WINDOW_SIZES,
+        WINDOW_UNIT,
+        WINDOW_PRESETS,
+        WINDOW_SIZE_LABELS,
+    )
+except Exception:
+    from ..data.data_sp500 import (
+        WINDOW_SIZES,
+        WINDOW_UNIT,
+        WINDOW_PRESETS,
+        WINDOW_SIZE_LABELS,
+    )
 
 
 def register_callbacks(app):
@@ -175,9 +189,23 @@ def register_callbacks(app):
                 if pattern_uuid not in active_patterns_with_selection:
                     active_patterns_with_selection[pattern_uuid] = active_patterns[pattern_uuid]
 
+        # If there's no active sketch yet, don't try to attach selection
+        if not active_sketch_id:
+            return new_selected, dash.no_update
+
+        key = str(active_sketch_id)
+
+        # Ensure the active sketch exists in the selection mapping
+        if key not in active_patterns_with_selection:
+            if active_patterns and key in active_patterns:
+                active_patterns_with_selection[key] = active_patterns[key]
+            else:
+                # Nothing to attach to; just update selection store
+                return new_selected, dash.no_update
+
         # Now you can safely assign
-        active_patterns_with_selection[str(active_sketch_id)]["selected_series"] = idx
-        active_patterns_with_selection[str(active_sketch_id)]["selected_series_name"] = series["titles"][int(idx)]
+        active_patterns_with_selection[key]["selected_series"] = idx
+        active_patterns_with_selection[key]["selected_series_name"] = series["titles"][int(idx)]
         
 
         print(len(active_patterns_with_selection))
@@ -246,7 +274,19 @@ def register_callbacks(app):
             )
         )
 
+        # Fallback: if no active patterns yet, render any explicitly selected series
         if not active_patterns:
+            selected = list(selected or [])
+            if selected:
+                for idx in selected[:1]:  # show the first selection to keep the view clean
+                    i = int(idx)
+                    fig.add_trace(go.Scatter(
+                        x=series["x_date"],
+                        y=series["y"][i],
+                        mode='lines',
+                        name=series["titles"][i],
+                        line={'color': '#2196f3'}
+                    ))
             fig.update_layout(**layout_style)
             return fig
 
@@ -257,7 +297,15 @@ def register_callbacks(app):
         for pattern_id, pattern_info in active_patterns.items():
             color = pattern_info["color"]
             matched_patterns = pattern_info["matched_patterns"]
-            i = int(pattern_info["selected_series"])
+            # Determine which series index to plot
+            i_val = pattern_info.get("selected_series")
+            if i_val is None:
+                # Fallback to the first selection, if available
+                if selected:
+                    i_val = int(list(selected)[0])
+                else:
+                    continue
+            i = int(i_val)
             # Draw the main series line
             fig.add_trace(go.Scatter(
                 x=series["x_date"],
@@ -267,7 +315,10 @@ def register_callbacks(app):
                 line={'color': color}
             ))
 
-            for match in matched_patterns[pattern_info["selected_series_name"]]:
+            sel_name = pattern_info.get("selected_series_name")
+            if not sel_name or sel_name not in matched_patterns:
+                continue
+            for match in matched_patterns[sel_name]:
                 if match["score"] is not None and match["score"] <= threshold and min_ws <= match["window_size"] <= max_ws:
                     fig.add_vrect(
                         x0=series["x_date"][match["start_idx"]],
@@ -545,7 +596,9 @@ def register_callbacks(app):
                     'line': {'width': 2, 'color': color}
                 }],
                 'layout': {
-                    'height': 100,
+                    'height': 68,
+                    'width': 72,
+                    'autosize': False,
                     'margin': {'l': 0, 'r': 0, 't': 0, 'b': 0},
                     'xaxis': {'visible': False},
                     'yaxis': {'visible': False},
@@ -553,54 +606,143 @@ def register_callbacks(app):
                 }
             }
             preview_components.append(html.Div([
-                dcc.Graph(figure=preview_fig, config={'staticPlot': True, 'displayModeBar': False},
-                          style={'height': '60px', 'width': '60px'}),
-                html.Div(selected_series_name, style={'fontSize': '14px', 'textAlign': 'center', 'color': 'black'})
-            ]))
+                html.Button(
+                    '×',
+                    id={'type': 'remove-sketch', 'index': pattern_uuid},
+                    n_clicks=0,
+                    style={
+                        'position': 'absolute', 'top': '0px', 'right': '0px',
+                        'width': '18px', 'height': '18px', 'lineHeight': '16px',
+                        'border': 'none', 'borderRadius': '9px', 'background': '#eee', 'cursor': 'pointer',
+                        'padding': '0', 'fontSize': '12px', 'color': '#555'
+                    }
+                ),
+                dcc.Graph(
+                    figure=preview_fig,
+                    config={'staticPlot': True, 'displayModeBar': False, 'responsive': False},
+                    style={'height': '68px', 'width': '72px', 'margin': '0'}
+                ),
+                html.Div(
+                    selected_series_name,
+                    title=selected_series_name,
+                    style={
+                        'fontSize': '12px',
+                        'textAlign': 'center',
+                        'color': 'black',
+                        'marginTop': '4px',
+                        'height': '16px',
+                        'lineHeight': '16px',
+                        'whiteSpace': 'nowrap',
+                        'overflow': 'hidden',
+                        'textOverflow': 'ellipsis',
+                        'maxWidth': '60px'
+                    }
+                )
+            ], style={'position': 'relative', 'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 'rowGap': '4px', 'padding': '4px 6px 2px 6px', 'width': '90px', 'flex': '0 0 90px', 'background': '#fff', 'borderRadius': '8px', 'boxShadow': '0 1px 2px rgba(0,0,0,0.05)'}) )
         return preview_components
+
+    @app.callback(
+        Output("active-patterns", "data", allow_duplicate=True),
+        Output("sketch-history-store", "data", allow_duplicate=True),
+        Output("match-results-store", "data", allow_duplicate=True),
+        Output("series-to-sketch-map", "data", allow_duplicate=True),
+        Output("active-sketch-id", "data", allow_duplicate=True),
+        Input({'type': 'remove-sketch', 'index': ALL}, 'n_clicks'),
+        State("active-patterns", "data"),
+        State("sketch-history-store", "data"),
+        State("match-results-store", "data"),
+        State("active-sketch-id", "data"),
+        prevent_initial_call=True
+    )
+    def remove_sketch(n_clicks_list, active_patterns, history, match_data, active_sketch_id):
+        ctx = callback_context
+        if not ctx.triggered or all(n == 0 or n is None for n in (n_clicks_list or [])):
+            raise dash.exceptions.PreventUpdate
+
+        triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+        removed_id = str(eval(triggered_id)['index'])
+
+        # Remove from active patterns and history
+        new_active = dict(active_patterns or {})
+        new_active.pop(removed_id, None)
+
+        new_history = dict(history or {})
+        new_history.pop(removed_id, None)
+
+        # Filter matches referencing the removed id
+        new_match = {}
+        if match_data:
+            for name, uuid_dict in match_data.items():
+                filtered = {uuid: matches for uuid, matches in uuid_dict.items() if str(uuid) != removed_id}
+                if filtered:
+                    new_match[name] = filtered
+
+        # Rebuild series_to_sketch_map from remaining active patterns
+        name_to_index = {name: i for i, name in enumerate(series["titles"])}
+        series_to_sketch = {}
+        for sketch_idx, (sk_uuid, pat) in enumerate(new_active.items()):
+            for name in pat.get("matched_patterns", {}).keys():
+                idx = name_to_index.get(name)
+                if idx is not None:
+                    series_to_sketch[str(idx)] = sketch_idx
+
+        # Update active sketch id if needed
+        if active_sketch_id == removed_id:
+            new_active_sketch = next(iter(new_active.keys()), None)
+        else:
+            new_active_sketch = active_sketch_id
+
+        return new_active, new_history, new_match, series_to_sketch, new_active_sketch
 
     @app.callback(
         Output("window-size-store", "data"),
         Input("window-size-min-input", "value"),
         Input("window-size-max-input", "value"),
+        Input("window-size-unit-dropdown", "value"),
     )
-    def update_window_size(min_val, max_val):
-        print(f"window size updated with min={min_val}, max={max_val}")
-        return [min_val, max_val]
+    def update_window_size(min_val, max_val, unit):
+        print(f"window size updated with min={min_val}, max={max_val}, unit={unit}")
+        return [min_val, max_val, unit]
 
     @app.callback(
         Output("window-size-slider", "min"),
         Output("window-size-slider", "max"),
         Output("window-size-slider", "marks"),
         Output("window-size-slider", "value"),
-        Input("match-results-store", "data")
+        Input("match-results-store", "data"),
+        State("window-size-unit-dropdown", "value"),
     )
-    def update_window_size_slider(match_data):
-        print(f"update_window_size_slider triggered with match_data={match_data}")
-        default_marks = {7: "7", 15: "15", 30: "30"}
-        default_range = [7, 30]
+    def update_window_size_slider(match_data, unit):
+        print(f"update_window_size_slider triggered with match_data={match_data}, unit={unit}")
+        ws_min, ws_max = min(WINDOW_SIZES), max(WINDOW_SIZES)
+        # Default to labeled presets (e.g., 7->1w, 14->2w, 30->1m)
+        default_marks = {p["value"]: p["label"] for p in WINDOW_PRESETS}
+        default_range = [ws_min, ws_max]
 
         if not match_data:
-            return 7, 30, default_marks, default_range
+            return ws_min, ws_max, default_marks, default_range
 
-        # Extract unique window sizes
+        # Extract unique window sizes and intersect with known presets
         window_sizes = {
-            match["window_size"]
+            match.get("window_size")
             for matches_by_uuid in match_data.values()
             for matches in matches_by_uuid.values()
             for match in matches
+            if match is not None and match.get("window_size") is not None
         }
 
         if not window_sizes:
-            return 7, 30, default_marks, default_range
+            return ws_min, ws_max, default_marks, default_range
 
-        sorted_sizes = sorted(window_sizes)
-        marks = {size: str(size) for size in sorted_sizes}
-        min_val = sorted_sizes[0]
-        max_val = sorted_sizes[-1]
-        default_val = [min_val, max_val]
+        present_presets = sorted(s for s in window_sizes if s in WINDOW_SIZE_LABELS)
+        if not present_presets:
+            # Fall back to numeric labels if matches don't align to presets
+            sorted_sizes = sorted(window_sizes)
+            marks = {size: str(size) for size in sorted_sizes}
+            return sorted_sizes[0], sorted_sizes[-1], marks, [sorted_sizes[0], sorted_sizes[-1]]
 
-        return min_val, max_val, marks, [min_val, max_val]
+        marks = {size: WINDOW_SIZE_LABELS[size] for size in present_presets}
+        return present_presets[0], present_presets[-1], marks, [present_presets[0], present_presets[-1]]
     
     @app.callback(
         Output('series-name-filter', 'value'),

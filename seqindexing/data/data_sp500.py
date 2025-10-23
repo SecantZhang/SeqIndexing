@@ -9,7 +9,15 @@ from tqdm import tqdm
 from seqindexing.app.utils import interpolate_to_fixed_size, normalize_minmax
 
 # --- Config ---
-WINDOW_SIZES = [7, 14, 30]
+# Preset windows expressed in dataset units with human-friendly labels
+WINDOW_UNIT = "days"
+WINDOW_PRESETS = [
+    {"value": 7, "label": "1w"},
+    {"value": 14, "label": "2w"},
+    {"value": 30, "label": "1m"},
+]
+WINDOW_SIZES = [p["value"] for p in WINDOW_PRESETS]
+WINDOW_SIZE_LABELS = {p["value"]: p["label"] for p in WINDOW_PRESETS}
 TARGET_SIZE = 32
 STEP_SIZE = 1
 MAX_STOCKS = 20

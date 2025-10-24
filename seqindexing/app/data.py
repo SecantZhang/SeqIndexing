@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+from numpy.linalg import norm
 from pathlib import Path
+np.random.seed(0)
 
 from chromadb import PersistentClient
 from .utils import interpolate_to_fixed_size
@@ -27,6 +29,8 @@ series = {
 
 
 def query_chroma_topk(histories: dict[str, list[float]], k: int = 100):
+    print(os.getcwd())
+    # Initialize ChromaDB client and collection
     client = PersistentClient(path="./chroma_db")
     collection = client.get_collection("sp500_series")
 

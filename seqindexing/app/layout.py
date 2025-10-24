@@ -12,9 +12,9 @@ except Exception:
 
 np.random.seed(0)
 
-# Responsive sizing
-APP_W = "min(95vw, 1600px)"
-APP_H = "min(92vh, 1000px)"
+# ── responsive sizing ──────────────────────────────────────────────
+APP_W = "min(98vw, 1600px)"      # overall width
+APP_H = "calc(100vh - 40px)"     # overall height
 # ── column shares ─────────────────────────────────────────────────
 LEFT_PLOT_RATIO, LEFT_HISTORY_RATIO = 1, 0        # left column
 RIGHT_CTRL_RATIO, RIGHT_SELECT_RATIO, RIGHT_SKETCH_RATIO = 0.5, 0.5, 0
@@ -59,11 +59,9 @@ layout = html.Div(
         # top_bar,
         # ── workspace grid ─────────────────────────────────────────
         html.Div(
+            className="workspace-grid",
             style={
                 "flex": "1 1 0%",
-                "display": "grid",
-                "gridTemplateColumns": "minmax(0,5fr) minmax(0,3fr)",
-                "gap": "24px",
                 "minHeight": 0,
             },
             children=[
@@ -164,7 +162,7 @@ layout = html.Div(
                                         },
                                         config={"responsive": True},
                                         style={
-                                            "height": "clamp(420px, 60vh, 680px)",
+                                            "height": "clamp(420px, 60vh, 700px)",
                                             "width": "100%",
                                             "minWidth": 0
                                         },

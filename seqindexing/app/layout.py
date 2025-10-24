@@ -7,9 +7,9 @@ import numpy as np
 
 np.random.seed(0)
 
-# ── add these two constants near the top of layout.py ─────────────
-APP_W = "1600px"      # overall width  (change to taste)
-APP_H = "900px"       # overall height (change to taste)
+# ── responsive sizing ──────────────────────────────────────────────
+APP_W = "min(98vw, 1600px)"      # overall width
+APP_H = "calc(100vh - 40px)"     # overall height
 # ── column shares ─────────────────────────────────────────────────
 LEFT_PLOT_RATIO, LEFT_HISTORY_RATIO = 1, 0        # left column
 RIGHT_CTRL_RATIO, RIGHT_SELECT_RATIO, RIGHT_SKETCH_RATIO = 0.5, 0.5, 0
@@ -54,11 +54,9 @@ layout = html.Div(
         # top_bar,
         # ── workspace grid ─────────────────────────────────────────
         html.Div(
+            className="workspace-grid",
             style={
                 "flex": "1 1 0%",
-                "display": "grid",
-                "gridTemplateColumns": "minmax(0,5fr) minmax(0,3fr)",
-                "gap": "24px",
                 "minHeight": 0,
             },
             children=[
@@ -158,7 +156,7 @@ layout = html.Div(
                                         },
                                         config={"responsive": True},
                                         style={
-                                            "height": f"600px",  # Fixed height so history list is always visible below
+                                            "height": "clamp(420px, 60vh, 700px)",
                                             "width": "100%",
                                             "minWidth": 0
                                         },

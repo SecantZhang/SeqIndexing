@@ -1,0 +1,10 @@
+chromadb
+dash
+Flask
+numpy
+pandas
+plotly
+PyYAML
+scipy
+tqdm
+

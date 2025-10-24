@@ -143,14 +143,19 @@ body {
     background: #f2f4f7;
 }
 
+/* Ensure first thumbnail isn't clipped under the card's inner padding */
+#sketch-history-list {
+    padding-left: 20px;
+}
+
 .material-main {
     flex: 7;
     min-width: 0;
 }
 .material-container {
-    max-width: 1100px;
-    margin: 30px auto;
-    padding: 24px;
+    max-width: min(95vw, 1600px);
+    margin: 2vh auto;
+    padding: clamp(12px, 2vw, 24px);
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 2px 12px rgba(60,60,60,0.10);
@@ -169,13 +174,13 @@ body {
 
 /* Unified blue header bar for all card headers */
 .nudb-header-bar {
-    height: 50px;
-    min-height: 50px;
+    height: clamp(40px, 6vh, 50px);
+    min-height: clamp(40px, 6vh, 50px);
     background: #1976d2;
     display: flex;
     align-items: center;
-    padding-left: 32px;
-    padding-right: 32px;
+    padding-left: clamp(12px, 2vw, 32px);
+    padding-right: clamp(12px, 2vw, 32px);
     border-radius: 12px 12px 0 0;
     margin-left: -20px;   /* match card padding */
     margin-right: -20px;
@@ -189,14 +194,14 @@ body {
 .nudb-header-bar-text {
     color: #fff;
     font-weight: bold;
-    font-size: 1.2rem;
+    font-size: clamp(1rem, 2vw, 1.2rem);
     letter-spacing: 0.5px;
 }
 .nudb-subheader-small {
-    font-size: 0.90rem;
+    font-size: 0.95rem;
     font-weight: 500;
     color: #808080;
-    margin-bottom: 2px;
+    margin-bottom: 10px;
     margin-top: 5px;
     letter-spacing: 0.01em;
     font-family: 'Roboto', Arial, sans-serif;
@@ -239,4 +244,9 @@ body {
 }
 #k-input {
     -moz-appearance: textfield;
+}
+
+/* Responsive: collapse grid to single column on narrow screens */
+@media (max-width: 1024px) {
+    .nudb-header-bar-text { font-size: 1rem; }
 }

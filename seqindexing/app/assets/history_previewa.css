@@ -1,6 +1,6 @@
 #sketch-history-list .dash-graph,
 #sketch-history-list img {
-    height: 110px !important;     /* ↓ from 120 px */
-    width:  140px !important;    /* fixed width so they don’t stretch */
-    flex:   0 0 140px;           /* each item occupies 140 px in the row */
+    height: clamp(72px, 10vh, 110px) !important;
+    width:  clamp(96px, 12vw, 140px) !important;
+    flex:   0 0 clamp(96px, 12vw, 140px);
 }

@@ -1,61 +1,58 @@
-import pandas as pd
-import numpy as np
 import uuid
-import chromadb
-from chromadb.config import Settings
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from chromadb import PersistentClient
 from tqdm import tqdm
 
+from seqindexing.app.utils import interpolate_to_fixed_size, normalize_minmax
+
 # --- Config ---
-WINDOW_SIZE = [7, 14, 30]
+# Preset windows expressed in dataset units with human-friendly labels
+WINDOW_UNIT = "days"
+WINDOW_PRESETS = [
+    {"value": 7, "label": "1w"},
+    {"value": 14, "label": "2w"},
+    {"value": 30, "label": "1m"},
+]
+WINDOW_SIZES = [p["value"] for p in WINDOW_PRESETS]
+WINDOW_SIZE_LABELS = {p["value"]: p["label"] for p in WINDOW_PRESETS}
 TARGET_SIZE = 32
 STEP_SIZE = 1
-CSV_PATH = "/home/zzt7020/NUDB/SeqIndexing/data/sp500.csv"
+MAX_STOCKS = 20
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CSV_PATH = PROJECT_ROOT / "data" / "sp500.csv"
+CHROMA_PATH = PROJECT_ROOT / "chroma_db"
 COLLECTION_NAME = "sp500_series"
 
 
-def interpolate_to_fixed_size(arr, target_size=32):
-    x_old = np.linspace(0, 1, num=len(arr))
-    x_new = np.linspace(0, 1, num=target_size)
-    return np.interp(x_new, x_old, arr)
-
-
-def normalize_minmax(arr):
-    min_val = np.min(arr)
-    max_val = np.max(arr)
-    if max_val == min_val:
-        return np.zeros_like(arr)  # or np.ones_like(arr)
-    return (arr - min_val) / (max_val - min_val)
-
-
 if __name__ == "__main__":
-    # --- Load data ---
-    df = pd.read_csv(CSV_PATH)
-    df["Date"] = pd.to_datetime(df["Date"])
-    df.set_index("Date", inplace=True)
-    df = df.dropna(axis=1, how="any")
+    # Load data
+    df = pd.read_csv(CSV_PATH, parse_dates=["Date"]).set_index("Date").dropna(axis=1)
 
-    client = chromadb.PersistentClient(path="./chroma_db")
+    client = PersistentClient(path=str(CHROMA_PATH))
     collection = client.get_or_create_collection(name=COLLECTION_NAME)
 
-    # --- Add vectors ---
-    for window_size in WINDOW_SIZE:
-        print(f"processing window size {window_size} from {WINDOW_SIZE}")
-        for stock_name in tqdm(df.columns[:20]):
-            series = df[stock_name].values
+    # Add vectors
+    for window_size in WINDOW_SIZES:
+        print(f"processing window size {window_size} from {WINDOW_SIZES}")
+        for stock_name in tqdm(df.columns[:MAX_STOCKS]):
+            values = df[stock_name].to_numpy()
             dates = df.index
 
-            for start in range(0, len(series) - window_size + 1, STEP_SIZE):
+            for start in range(0, len(values) - window_size + 1, STEP_SIZE):
                 end = start + window_size
-                window = series[start:end]
+                window = values[start:end]
 
-                if np.any(np.isnan(window)):
+                if np.isnan(window).any():
                     continue
 
-                normalized_series = normalize_minmax(window)
-                interpolated_series = interpolate_to_fixed_size(normalized_series, target_size=TARGET_SIZE)
+                normalized = normalize_minmax(window)
+                interpolated = interpolate_to_fixed_size(normalized, target_size=TARGET_SIZE)
 
                 collection.add(
-                    embeddings=[interpolated_series.tolist()],
+                    embeddings=[interpolated.tolist()],
                     documents=[f"{stock_name}_{dates[start]}_{dates[end-1]}"],
                     ids=[str(uuid.uuid4())],
                     metadatas=[{
@@ -68,4 +65,4 @@ if __name__ == "__main__":
                     }]
                 )
 
-    print("✅ Inserted vectors into ChromaDB.")
+    print("Inserted vectors into ChromaDB.")
